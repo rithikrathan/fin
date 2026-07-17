@@ -14,12 +14,14 @@
   --font-mono: 'JetBrains Mono', 'Roboto Mono', monospace;
 
   --shadow-glow: 0 0 20px rgba(255, 42, 42, 0.4);
+  --shadow-glow-lg: 0 0 40px rgba(255, 42, 42, 0.25);
 }
 
 html {
   background-color: var(--color-base);
   color: var(--color-txt-primary);
   font-family: var(--font-sans);
+  font-size: 16px;
 }
 
 body {
@@ -27,4 +29,12 @@ body {
   min-height: 100vh;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+input, select, textarea {
+  font-size: 1rem;
+}
+
+.font-mono {
+  font-variant-numeric: tabular-nums;
 }
