@@ -15,6 +15,9 @@ Thumbs.db
 /bin/
 /generated/
 
+# Dependencies
+node_modules/
+
 # Ignore system-specific files
 *.cache
 *.DS_Store
