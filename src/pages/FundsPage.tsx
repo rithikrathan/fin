@@ -56,7 +56,7 @@ export default function FundsPage() {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: string | number | (string | number)[]) => formatCurrency(Number(value))}
+                  formatter={(value) => formatCurrency(Number(value ?? 0))}
                   contentStyle={{
                     background: 'rgba(25,25,25,0.9)',
                     border: '1px solid rgba(255,255,255,0.08)',
