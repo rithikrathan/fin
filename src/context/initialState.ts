@@ -46,9 +46,9 @@ const snap = () => snapId++;
 
 export const initialState: AppState = {
   funds: [
-    { id: 1, name: 'needs', balance: 38200, allocation_pct: 50, color: '#FF2A2A', deadline: null, goal_amount: null },
-    { id: 2, name: 'wants', balance: 18650, allocation_pct: 20, color: '#A78BFA', deadline: null, goal_amount: null },
-    { id: 3, name: 'savings', balance: 54800, allocation_pct: 30, color: '#4ADE80', deadline: null, goal_amount: null },
+    { id: 1, name: 'needs', balance: 38200, allocation_pct: 50, allocation_locked: false, color: '#FF2A2A', deadline: null, goal_amount: null, interest_rate: null, interest_frequency: null, interest_calc_type: null },
+    { id: 2, name: 'wants', balance: 18650, allocation_pct: 20, allocation_locked: false, color: '#A78BFA', deadline: null, goal_amount: null, interest_rate: null, interest_frequency: null, interest_calc_type: null },
+    { id: 3, name: 'savings', balance: 54800, allocation_pct: 30, allocation_locked: false, color: '#4ADE80', deadline: null, goal_amount: null, interest_rate: 7, interest_frequency: 'yearly', interest_calc_type: 'compound' },
   ],
 
   milestones: [
@@ -236,6 +236,8 @@ export const initialState: AppState = {
   settings: {
     currency: '₹',
     locale: 'en-IN',
+    expected_monthly_income: 80000,
+    scale_amount: 5000,
   },
 
   loading: false,

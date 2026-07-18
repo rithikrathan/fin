@@ -5,9 +5,13 @@ export interface Fund {
   name: string;
   balance: number;
   allocation_pct: number;
+  allocation_locked: boolean;
   color: string;
   deadline: string | null;
   goal_amount: number | null;
+  interest_rate: number | null;
+  interest_frequency: 'daily' | 'weekly' | 'monthly' | 'yearly' | null;
+  interest_calc_type: 'compound' | 'simple' | null;
 }
 
 export interface Milestone {
@@ -131,6 +135,8 @@ export interface ReportData {
 export interface Settings {
   currency: string;
   locale: string;
+  expected_monthly_income: number;
+  scale_amount: number;
 }
 
 export interface AppState {
