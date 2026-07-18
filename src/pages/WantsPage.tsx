@@ -25,7 +25,7 @@ export default function WantsPage() {
           <div className="text-sm text-txt-secondary uppercase tracking-widest mb-2">
             Total Saved
           </div>
-          <div className="font-mono text-3xl font-bold text-gain">
+          <div className="font-mono text-2xl sm:text-3xl font-bold text-gain min-w-0 break-all">
             {formatCurrency(totalSaved)}
           </div>
         </Card>
@@ -33,7 +33,7 @@ export default function WantsPage() {
           <div className="text-sm text-txt-secondary uppercase tracking-widest mb-2">
             Total Target
           </div>
-          <div className="font-mono text-3xl font-bold text-txt-primary">
+          <div className="font-mono text-2xl sm:text-3xl font-bold text-txt-primary min-w-0 break-all">
             {formatCurrency(totalTarget)}
           </div>
         </Card>

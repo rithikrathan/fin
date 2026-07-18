@@ -2,10 +2,27 @@ export type IncomeType = 'monthly' | 'one_time' | 'irregular';
 
 export interface Fund {
   id: number;
-  name: 'needs' | 'wants' | 'savings';
+  name: string;
   balance: number;
   allocation_pct: number;
   color: string;
+  deadline: string | null;
+  goal_amount: number | null;
+}
+
+export interface Milestone {
+  id: number;
+  fund_id: number;
+  name: string;
+  target_amount: number;
+  reached: boolean;
+}
+
+export interface FundSnapshot {
+  id: number;
+  fund_id: number;
+  balance: number;
+  date: string;
 }
 
 export interface IncomeTransaction {
@@ -17,11 +34,7 @@ export interface IncomeTransaction {
   category: string;
   date: string;
   notes: string;
-  fund_allocation: {
-    needs: number;
-    wants: number;
-    savings: number;
-  };
+  fund_allocation: Record<number, number>;
 }
 
 export interface ExpenseTransaction {
@@ -34,9 +47,20 @@ export interface ExpenseTransaction {
   fund_name: string;
   planned: boolean;
   date: string;
+  is_misc: boolean;
 }
 
-export type Transaction = IncomeTransaction | ExpenseTransaction;
+export interface TransferTransaction {
+  id: number;
+  type: 'transfer';
+  from_fund_id: number;
+  to_fund_id: number;
+  amount: number;
+  note: string;
+  date: string;
+}
+
+export type Transaction = IncomeTransaction | ExpenseTransaction | TransferTransaction;
 
 export interface Want {
   id: number;
@@ -105,15 +129,14 @@ export interface ReportData {
 }
 
 export interface Settings {
-  needs_pct: number;
-  wants_pct: number;
-  savings_pct: number;
   currency: string;
   locale: string;
 }
 
 export interface AppState {
   funds: Fund[];
+  milestones: Milestone[];
+  fund_snapshots: FundSnapshot[];
   transactions: Transaction[];
   wants: Want[];
   needs: Need[];
@@ -127,6 +150,14 @@ export type AppAction =
   | { type: 'ADD_TRANSACTION'; payload: Transaction }
   | { type: 'REMOVE_TRANSACTION'; payload: number }
   | { type: 'UPDATE_FUND'; payload: Fund }
+  | { type: 'ADD_FUND'; payload: Fund }
+  | { type: 'REMOVE_FUND'; payload: number }
+  | { type: 'ADD_MILESTONE'; payload: Milestone }
+  | { type: 'UPDATE_MILESTONE'; payload: Milestone }
+  | { type: 'REMOVE_MILESTONE'; payload: number }
+  | { type: 'ADD_FUND_SNAPSHOT'; payload: FundSnapshot }
+  | { type: 'REDISTRIBUTE_SURPLUS'; payload: { transfers: { from_fund_id: number; to_fund_id: number; amount: number }[] } }
+  | { type: 'RESET_TRANSACTIONS' }
   | { type: 'ADD_WANT'; payload: Want }
   | { type: 'UPDATE_WANT'; payload: Want }
   | { type: 'REMOVE_WANT'; payload: number }

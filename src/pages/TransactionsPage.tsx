@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import type { IncomeType, IncomeTransaction, ExpenseTransaction } from '../types';
-import { formatCurrency, formatDate, generateId } from '../utils/helpers';
+import { formatCurrency, formatDate, generateId, round2 } from '../utils/helpers';
 import Card from '../components/shared/Card';
 import Button from '../components/shared/Button';
 import Badge from '../components/shared/Badge';
@@ -61,7 +61,7 @@ export default function TransactionsPage() {
       ) : (
         <div className="space-y-2">
           {sorted.map((tx) => (
-            <TransactionRow key={tx.id} tx={tx} dispatch={dispatch} />
+            <TransactionRow key={tx.id} tx={tx} funds={state.funds} dispatch={dispatch} />
           ))}
         </div>
       )}
@@ -69,7 +69,7 @@ export default function TransactionsPage() {
       <AddIncomeModal
         open={incomeOpen}
         onClose={() => setIncomeOpen(false)}
-        settings={state.settings}
+        funds={state.funds}
         dispatch={dispatch}
       />
       <AddExpenseModal
@@ -84,9 +84,11 @@ export default function TransactionsPage() {
 
 function TransactionRow({
   tx,
+  funds,
   dispatch,
 }: {
   tx: import('../types').Transaction;
+  funds: import('../types').Fund[];
   dispatch: React.Dispatch<import('../types').AppAction>;
 }) {
   const isIncome = tx.type === 'income';
@@ -105,7 +107,7 @@ function TransactionRow({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <span className="text-sm font-medium text-txt-primary truncate">
-              {isIncome ? tx.name : tx.description}
+              {tx.type === 'income' ? tx.name : tx.type === 'expense' ? tx.description : tx.note}
             </span>
             {tx.type === 'expense' && (
               <Badge
@@ -123,7 +125,7 @@ function TransactionRow({
             )}
           </div>
           <div className="text-xs text-txt-secondary mt-0.5">
-            {tx.category} · {formatDate(tx.date)}
+            {tx.type === 'expense' ? tx.category : tx.type === 'transfer' ? 'Transfer' : tx.category} · {formatDate(tx.date)}
           </div>
         </div>
 
@@ -136,11 +138,15 @@ function TransactionRow({
             {isIncome ? '+' : '-'}
             {formatCurrency(tx.amount)}
           </div>
-          {isIncome && (
+          {tx.type === 'income' && (
             <div className="text-[10px] text-txt-secondary mt-0.5 font-mono">
-              N:{formatCurrency(tx.fund_allocation.needs)} W:
-              {formatCurrency(tx.fund_allocation.wants)} S:
-              {formatCurrency(tx.fund_allocation.savings)}
+              {Object.entries(tx.fund_allocation)
+                .filter(([, v]) => v > 0)
+                .map(([fundId, val]) => {
+                  const f = funds.find((f) => f.id === Number(fundId));
+                  return `${f?.name?.[0]?.toUpperCase() || '?'}:${formatCurrency(val)}`;
+                })
+                .join(' ')}
             </div>
           )}
           {tx.type === 'expense' && (
@@ -164,12 +170,12 @@ function TransactionRow({
 function AddIncomeModal({
   open,
   onClose,
-  settings,
+  funds,
   dispatch,
 }: {
   open: boolean;
   onClose: () => void;
-  settings: import('../types').Settings;
+  funds: import('../types').Fund[];
   dispatch: React.Dispatch<import('../types').AppAction>;
 }) {
   const [name, setName] = useState('');
@@ -192,11 +198,9 @@ function AddIncomeModal({
       category: category || 'general',
       date: new Date().toISOString().split('T')[0],
       notes,
-      fund_allocation: {
-        needs: amt * (settings.needs_pct / 100),
-        wants: amt * (settings.wants_pct / 100),
-        savings: amt * (settings.savings_pct / 100),
-      },
+      fund_allocation: Object.fromEntries(
+        funds.map((f) => [f.id, round2(amt * (f.allocation_pct / 100))])
+      ) as Record<number, number>,
     };
 
     dispatch({ type: 'ADD_TRANSACTION', payload: tx });
@@ -264,26 +268,19 @@ function AddIncomeModal({
         {amount && parseFloat(amount) > 0 && (
           <div className="bg-white/[0.03] rounded-lg p-3 text-xs text-txt-secondary space-y-1">
             <div className="font-medium text-txt-primary text-sm mb-2">
-              Auto-allocation ({settings.needs_pct}/{settings.wants_pct}/{settings.savings_pct})
+              Auto-allocation
             </div>
-            <div className="flex justify-between">
-              <span>Needs</span>
-              <span className="font-mono text-gain">
-                {formatCurrency(parseFloat(amount) * (settings.needs_pct / 100))}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>Wants</span>
-              <span className="font-mono text-gain">
-                {formatCurrency(parseFloat(amount) * (settings.wants_pct / 100))}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>Savings</span>
-              <span className="font-mono text-gain">
-                {formatCurrency(parseFloat(amount) * (settings.savings_pct / 100))}
-              </span>
-            </div>
+            {funds.map((f) => (
+              <div key={f.id} className="flex justify-between">
+                <span className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: f.color }} />
+                  {f.name}
+                </span>
+                <span className="font-mono text-gain">
+                  {formatCurrency(round2(parseFloat(amount) * (f.allocation_pct / 100)))}
+                </span>
+              </div>
+            ))}
           </div>
         )}
 
@@ -334,6 +331,7 @@ function AddExpenseModal({
       fund_name: selectedFund?.name || 'needs',
       planned,
       date: new Date().toISOString().split('T')[0],
+      is_misc: category === 'Miscellaneous',
     };
 
     dispatch({ type: 'ADD_TRANSACTION', payload: tx });

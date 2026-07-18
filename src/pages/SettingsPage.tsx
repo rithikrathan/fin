@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
 import type { AppState } from '../types';
+import { round2 } from '../utils/helpers';
 import Card from '../components/shared/Card';
 import Button from '../components/shared/Button';
 import Modal from '../components/shared/Modal';
@@ -8,6 +9,7 @@ import Modal from '../components/shared/Modal';
 export default function SettingsPage() {
   const { state, dispatch } = useApp();
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [resetTxOpen, setResetTxOpen] = useState(false);
   const [toast, setToast] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -65,21 +67,27 @@ export default function SettingsPage() {
     showToast('All data deleted');
   };
 
-  const [needsPct, setNeedsPct] = useState(String(state.settings.needs_pct));
-  const [wantsPct, setWantsPct] = useState(String(state.settings.wants_pct));
-  const [savingsPct, setSavingsPct] = useState(String(state.settings.savings_pct));
+  const resetTransactions = () => {
+    dispatch({ type: 'RESET_TRANSACTIONS' });
+    setResetTxOpen(false);
+    showToast('Transactions cleared, fund balances preserved');
+  };
+
+  const [pctValues, setPctValues] = useState<Record<number, string>>(
+    Object.fromEntries(state.funds.map((f) => [f.id, String(f.allocation_pct)]))
+  );
+
+  const totalPct = Object.values(pctValues).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+  const pctValid = totalPct === 100;
 
   const savePercentages = () => {
-    const n = parseFloat(needsPct);
-    const w = parseFloat(wantsPct);
-    const s = parseFloat(savingsPct);
-    if (isNaN(n) || isNaN(w) || isNaN(s)) return;
-    if (n + w + s !== 100) {
-      showToast('Percentages must sum to 100');
-      return;
+    if (!pctValid) return;
+    for (const fund of state.funds) {
+      const val = parseFloat(pctValues[fund.id]);
+      if (isNaN(val)) continue;
+      dispatch({ type: 'UPDATE_FUND', payload: { ...fund, allocation_pct: round2(val) } });
     }
-    dispatch({ type: 'UPDATE_SETTINGS', payload: { needs_pct: n, wants_pct: w, savings_pct: s } });
-    showToast('Settings saved');
+    showToast('Allocation saved');
   };
 
   return (
@@ -89,42 +97,34 @@ export default function SettingsPage() {
         <p className="text-base text-txt-secondary mb-5">
           Percentage split for incoming income. Must sum to 100%.
         </p>
-        <div className="grid grid-cols-3 gap-4 mb-5">
-          <div>
-            <label className="block text-sm text-txt-secondary mb-1.5">Needs %</label>
-            <input
-              type="number"
-              value={needsPct}
-              onChange={(e) => setNeedsPct(e.target.value)}
-              min="0"
-              max="100"
-              className="w-full bg-white/[0.04] border border-border-subtle rounded-xl px-4 py-3 text-base text-txt-primary font-mono outline-none focus:border-brand/50 transition-colors"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-txt-secondary mb-1.5">Wants %</label>
-            <input
-              type="number"
-              value={wantsPct}
-              onChange={(e) => setWantsPct(e.target.value)}
-              min="0"
-              max="100"
-              className="w-full bg-white/[0.04] border border-border-subtle rounded-xl px-4 py-3 text-base text-txt-primary font-mono outline-none focus:border-brand/50 transition-colors"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-txt-secondary mb-1.5">Savings %</label>
-            <input
-              type="number"
-              value={savingsPct}
-              onChange={(e) => setSavingsPct(e.target.value)}
-              min="0"
-              max="100"
-              className="w-full bg-white/[0.04] border border-border-subtle rounded-xl px-4 py-3 text-base text-txt-primary font-mono outline-none focus:border-brand/50 transition-colors"
-            />
-          </div>
+        <div className="space-y-4 mb-5">
+          {state.funds.map((f) => (
+            <div key={f.id}>
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full" style={{ backgroundColor: f.color }} />
+                  <label className="text-sm text-txt-primary">{f.name}</label>
+                </div>
+                <span className="font-mono text-sm text-txt-secondary">{pctValues[f.id] || 0}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={pctValues[f.id] || 0}
+                onChange={(e) => setPctValues((prev) => ({ ...prev, [f.id]: e.target.value }))}
+                className="w-full h-2 rounded-full appearance-none bg-white/[0.06] accent-brand cursor-pointer"
+              />
+            </div>
+          ))}
         </div>
-        <Button variant="primary" onClick={savePercentages}>
+        <div className="flex items-center justify-between mb-5">
+          <span className="text-base text-txt-secondary">Total</span>
+          <span className={`font-mono text-base font-semibold ${pctValid ? 'text-gain' : 'text-loss'}`}>
+            {totalPct}%
+          </span>
+        </div>
+        <Button variant="primary" onClick={savePercentages} disabled={!pctValid}>
           Save Allocation
         </Button>
       </Card>
@@ -172,6 +172,18 @@ export default function SettingsPage() {
             </>
           </div>
 
+          <div className="flex items-center justify-between py-3 border-b border-border-subtle">
+            <div>
+              <div className="text-base font-medium text-amber-400">Reset Transactions</div>
+              <div className="text-sm text-txt-secondary">
+                Clear all transactions but keep fund balances, milestones, and snapshots.
+              </div>
+            </div>
+            <Button variant="secondary" onClick={() => setResetTxOpen(true)}>
+              Reset
+            </Button>
+          </div>
+
           <div className="flex items-center justify-between py-3">
             <div>
               <div className="text-base font-medium text-red-400">Delete All Data</div>
@@ -190,6 +202,10 @@ export default function SettingsPage() {
         <h3 className="text-xl font-bold text-txt-primary mb-3">About</h3>
         <div className="space-y-2 text-base text-txt-secondary">
           <div className="flex justify-between">
+            <span>Funds</span>
+            <span className="font-mono text-txt-primary">{state.funds.length}</span>
+          </div>
+          <div className="flex justify-between">
             <span>Transactions</span>
             <span className="font-mono text-txt-primary">{state.transactions.length}</span>
           </div>
@@ -206,11 +222,29 @@ export default function SettingsPage() {
             <span className="font-mono text-txt-primary">{state.investments.length}</span>
           </div>
           <div className="flex justify-between">
+            <span>Milestones</span>
+            <span className="font-mono text-txt-primary">{state.milestones.length}</span>
+          </div>
+          <div className="flex justify-between">
             <span>Saved Reports</span>
             <span className="font-mono text-txt-primary">{state.reports.length}</span>
           </div>
         </div>
       </Card>
+
+      <Modal open={resetTxOpen} onClose={() => setResetTxOpen(false)} title="Reset Transactions">
+        <p className="text-base text-txt-secondary mb-6">
+          This will clear all transaction history but keep your fund balances, milestones, and snapshots. You can still see your current fund balances.
+        </p>
+        <div className="flex justify-end gap-3">
+          <Button variant="ghost" onClick={() => setResetTxOpen(false)}>
+            Cancel
+          </Button>
+          <Button variant="secondary" onClick={resetTransactions}>
+            Reset Transactions
+          </Button>
+        </div>
+      </Modal>
 
       <Modal open={deleteOpen} onClose={() => setDeleteOpen(false)} title="Delete All Data">
         <p className="text-base text-txt-secondary mb-6">

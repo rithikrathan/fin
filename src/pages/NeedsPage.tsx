@@ -30,7 +30,7 @@ export default function NeedsPage() {
           <div className="text-sm text-txt-secondary uppercase tracking-widest mb-2">
             Recurring Monthly
           </div>
-          <div className="font-mono text-3xl font-bold text-loss">
+          <div className="font-mono text-2xl sm:text-3xl font-bold text-loss min-w-0 break-all">
             {formatCurrency(monthlyTotal)}
           </div>
           <div className="text-sm text-txt-secondary mt-1">
@@ -41,7 +41,7 @@ export default function NeedsPage() {
           <div className="text-sm text-txt-secondary uppercase tracking-widest mb-2">
             One-Time Needs
           </div>
-          <div className="font-mono text-3xl font-bold text-txt-primary">
+          <div className="font-mono text-2xl sm:text-3xl font-bold text-txt-primary">
             {oneTime.length}
           </div>
           <div className="text-sm text-txt-secondary mt-1">

@@ -62,7 +62,7 @@ export default function HomePage() {
           <div className="text-sm text-txt-secondary uppercase tracking-widest mb-3 font-medium">
             Net Worth
           </div>
-          <div className="font-mono text-5xl font-bold text-txt-primary mb-2">
+          <div className="font-mono text-3xl sm:text-4xl lg:text-5xl font-bold text-txt-primary mb-2 min-w-0 break-all">
             {formatCurrency(netWorth)}
           </div>
           <div className="text-base text-txt-secondary">
@@ -105,7 +105,7 @@ export default function HomePage() {
                   {fund.name}
                 </span>
               </div>
-              <div className="font-mono text-4xl font-bold text-txt-primary mb-1">
+              <div className="font-mono text-2xl sm:text-3xl lg:text-4xl font-bold text-txt-primary mb-1 min-w-0 break-all">
                 {formatCurrency(fund.balance)}
               </div>
               <div className="text-sm text-txt-secondary">
@@ -156,10 +156,10 @@ export default function HomePage() {
                     </div>
                     <div className="min-w-0">
                       <div className="text-base text-txt-primary truncate font-medium">
-                        {tx.type === 'income' ? tx.name : tx.description}
+                      {tx.type === 'income' ? tx.name : tx.type === 'expense' ? tx.description : tx.note}
                       </div>
                       <div className="text-sm text-txt-secondary">
-                        {tx.category} · {formatDate(tx.date)}
+                        {tx.type === 'expense' ? tx.category : tx.type === 'transfer' ? 'Transfer' : tx.category} · {formatDate(tx.date)}
                       </div>
                     </div>
                   </div>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { formatCurrency } from '../utils/helpers';
+import { formatCurrency, round2 } from '../utils/helpers';
 import Card from '../components/shared/Card';
 import Button from '../components/shared/Button';
 import Modal from '../components/shared/Modal';
@@ -121,7 +121,7 @@ export default function FundsPage() {
                   </h4>
                 </div>
 
-                <div className="font-mono text-3xl font-bold text-txt-primary mb-1">
+                <div className="font-mono text-2xl sm:text-3xl font-bold text-txt-primary mb-1 min-w-0 break-all">
                   {formatCurrency(fund.balance)}
                 </div>
                 <div className="text-sm text-txt-secondary mb-4">
@@ -227,7 +227,7 @@ export default function FundsPage() {
       <ConfigModal
         open={configOpen}
         onClose={() => setConfigOpen(false)}
-        settings={state.settings}
+        funds={state.funds}
         dispatch={dispatch}
       />
     </div>
@@ -237,32 +237,29 @@ export default function FundsPage() {
 function ConfigModal({
   open,
   onClose,
-  settings,
+  funds,
   dispatch,
 }: {
   open: boolean;
   onClose: () => void;
-  settings: import('../types').Settings;
+  funds: import('../types').Fund[];
   dispatch: React.Dispatch<import('../types').AppAction>;
 }) {
-  const [needsPct, setNeedsPct] = useState(String(settings.needs_pct));
-  const [wantsPct, setWantsPct] = useState(String(settings.wants_pct));
-  const [savingsPct, setSavingsPct] = useState(String(settings.savings_pct));
+  const [pctValues, setPctValues] = useState<Record<number, string>>(
+    Object.fromEntries(funds.map((f) => [f.id, String(f.allocation_pct)]))
+  );
   const [toast, setToast] = useState('');
 
-  const sum = parseFloat(needsPct || '0') + parseFloat(wantsPct || '0') + parseFloat(savingsPct || '0');
-  const valid = sum === 100;
+  const totalPct = Object.values(pctValues).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+  const valid = totalPct === 100;
 
   const save = () => {
     if (!valid) return;
-    dispatch({
-      type: 'UPDATE_SETTINGS',
-      payload: {
-        needs_pct: parseFloat(needsPct),
-        wants_pct: parseFloat(wantsPct),
-        savings_pct: parseFloat(savingsPct),
-      },
-    });
+    for (const fund of funds) {
+      const val = parseFloat(pctValues[fund.id]);
+      if (isNaN(val)) continue;
+      dispatch({ type: 'UPDATE_FUND', payload: { ...fund, allocation_pct: round2(val) } });
+    }
     setToast('Allocation updated');
     setTimeout(() => { setToast(''); onClose(); }, 1000);
   };
@@ -273,25 +270,21 @@ function ConfigModal({
         Set the percentage split for incoming income. Must sum to 100%.
       </p>
       <div className="space-y-4">
-        {[
-          { label: 'Needs', value: needsPct, set: setNeedsPct, color: '#FF2A2A' },
-          { label: 'Wants', value: wantsPct, set: setWantsPct, color: '#A78BFA' },
-          { label: 'Savings', value: savingsPct, set: setSavingsPct, color: '#4ADE80' },
-        ].map((item) => (
-          <div key={item.label}>
+        {funds.map((f) => (
+          <div key={f.id}>
             <div className="flex items-center justify-between mb-1.5">
               <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full" style={{ backgroundColor: item.color }} />
-                <label className="text-base text-txt-primary">{item.label}</label>
+                <div className="h-3 w-3 rounded-full" style={{ backgroundColor: f.color }} />
+                <label className="text-base text-txt-primary">{f.name}</label>
               </div>
-              <span className="font-mono text-base text-txt-secondary">{item.value}%</span>
+              <span className="font-mono text-base text-txt-secondary">{pctValues[f.id] || 0}%</span>
             </div>
             <input
               type="range"
               min="0"
               max="100"
-              value={item.value}
-              onChange={(e) => item.set(e.target.value)}
+              value={pctValues[f.id] || 0}
+              onChange={(e) => setPctValues((prev) => ({ ...prev, [f.id]: e.target.value }))}
               className="w-full h-2 rounded-full appearance-none bg-white/[0.06] accent-brand cursor-pointer"
             />
           </div>
@@ -299,7 +292,7 @@ function ConfigModal({
         <div className="flex justify-between text-base mt-2">
           <span className="text-txt-secondary">Total</span>
           <span className={`font-mono font-semibold ${valid ? 'text-gain' : 'text-loss'}`}>
-            {sum}%
+            {totalPct}%
           </span>
         </div>
         <div className="flex justify-end gap-3 pt-3">

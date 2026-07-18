@@ -120,14 +120,14 @@ export default function DashboardPage() {
     const projection = projectWantsFund(
       wantsFund.balance,
       avgMonthlyIncome,
-      state.settings.wants_pct,
+      wantsFund.allocation_pct,
       maxPredMonth,
       now,
       pendingWants,
     );
 
     return { projection, maxMonths: maxPredMonth };
-  }, [wantsFund, avgMonthlyIncome, state.settings.wants_pct, pendingWants]);
+  }, [wantsFund, avgMonthlyIncome, pendingWants]);
 
   const allTargetValues = pendingWants.map((w) => w.target_price);
 
@@ -138,7 +138,7 @@ export default function DashboardPage() {
           <div className="text-sm text-txt-secondary uppercase tracking-widest mb-2">
             Net Worth
           </div>
-          <div className="font-mono text-3xl font-bold text-brand">
+          <div className="font-mono text-2xl sm:text-3xl font-bold text-brand min-w-0 break-all">
             {formatCurrency(netWorth)}
           </div>
         </Card>
@@ -153,7 +153,7 @@ export default function DashboardPage() {
                 {fund.name}
               </div>
             </div>
-            <div className="font-mono text-3xl font-bold text-txt-primary">
+            <div className="font-mono text-2xl sm:text-3xl font-bold text-txt-primary min-w-0 break-all">
               {formatCurrency(fund.balance)}
             </div>
           </Card>
@@ -174,7 +174,7 @@ export default function DashboardPage() {
             <div className="text-right">
               <div className="text-xs text-txt-secondary">Monthly inflow</div>
               <div className="font-mono text-lg font-bold text-gain">
-                +{formatCurrency(avgMonthlyIncome * (state.settings.wants_pct / 100))}
+                +{formatCurrency(avgMonthlyIncome * (wantsFund.allocation_pct / 100))}
               </div>
             </div>
           )}
