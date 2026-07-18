@@ -5,7 +5,7 @@ import { formatCurrency, formatDate, getROI, generateId } from '../utils/helpers
 import Card from '../components/shared/Card';
 import Button from '../components/shared/Button';
 
-type ReportType = 'daily' | 'weekly' | 'monthly';
+type ReportType = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 function computeReport(transactions: import('../types').Transaction[], startStr: string): ReportData {
   const txInRange = transactions.filter((t) => t.date >= startStr);
@@ -58,6 +58,11 @@ export default function ReportsPage() {
       break;
     }
     case 'monthly':
+      startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      break;
+    case 'yearly':
+      startDate = new Date(now.getFullYear(), 0, 1);
+      break;
     default:
       startDate = new Date(now.getFullYear(), now.getMonth(), 1);
   }
@@ -123,7 +128,7 @@ export default function ReportsPage() {
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex gap-2">
-          {(['daily', 'weekly', 'monthly'] as const).map((t) => (
+          {(['daily', 'weekly', 'monthly', 'yearly'] as const).map((t) => (
             <button
               key={t}
               onClick={() => setReportType(t)}
