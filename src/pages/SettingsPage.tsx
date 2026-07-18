@@ -35,7 +35,7 @@ export default function SettingsPage() {
     const text = JSON.stringify(data);
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'Finance Manager Data', text });
+        await navigator.share({ title: 'Fin Data', text });
         showToast('Shared');
       } catch {}
     } else {

@@ -37,15 +37,15 @@ export default function HomePage() {
           <div className="h-20 w-20 rounded-2xl bg-brand/10 shadow-glow-lg flex items-center justify-center text-4xl mb-8">
             ◉
           </div>
-          <h1 className="text-4xl font-bold text-txt-primary mb-4">
-            Welcome to Finance Manager
+          <h1 className="text-2xl sm:text-4xl font-bold text-txt-primary mb-4">
+            Welcome to Fin
           </h1>
-          <p className="text-lg text-txt-secondary max-w-md mb-10 leading-relaxed">
+          <p className="text-base sm:text-lg text-txt-secondary max-w-md mb-10 leading-relaxed px-4">
             Track your income, split into funds, and manage expenses. Start by adding your first transaction.
           </p>
           <button
             onClick={() => navigate('/transactions')}
-            className="px-8 py-4 rounded-2xl bg-brand text-white text-xl font-bold shadow-glow hover:bg-brand/90 transition-all cursor-pointer"
+            className="px-6 sm:px-8 py-3 sm:py-4 rounded-2xl bg-brand text-white text-lg sm:text-xl font-bold shadow-glow hover:bg-brand/90 transition-all cursor-pointer"
           >
             + Add Your First Transaction
           </button>
