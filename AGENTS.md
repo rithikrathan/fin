@@ -107,6 +107,11 @@ financeManager/
 ## Git
 
 - **NEVER commit or push without explicit user confirmation.** Always ask "Want me to commit?" or "Commit and push?" before running `git commit` or `git push`.
+- **Micro commits — one logical change per commit.** Do NOT batch unrelated changes into a single commit. Each distinct feature, fix, or refactor should be its own commit. Examples:
+  - Types + initialState update = 1 commit
+  - ManageFundsPage changes = separate commit
+  - FundsPage changes = separate commit
+  - A "2 for the entire project" approach is unacceptable — break it up.
 - **Pre-commit ritual:**
   1. If you made changes, ask: "docs need updating?"
   2. Update relevant docs if user confirms
