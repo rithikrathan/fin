@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { formatCurrency, round2 } from '../utils/helpers';
@@ -33,15 +33,11 @@ export default function FundsPage() {
   const activeNeeds = state.needs.filter((n) => n.active).length;
 
   const fundsWithSurplus = state.funds.filter((f) => {
-    const committed = state.needs
-      .filter((n) => n.fund_id === f.id && n.active)
-      .reduce((s, n) => {
-        if (n.frequency === 'monthly') return s + n.amount;
-        if (n.frequency === 'weekly') return s + n.amount * 4;
-        if (n.frequency === 'yearly') return s + n.amount / 12;
-        return s + n.amount;
-      }, 0);
-    return f.balance > committed;
+    if (f.name === 'wants' || f.name === 'savings') return false;
+    const fMilestones = state.milestones.filter((m) => m.fund_id === f.id);
+    if (fMilestones.length === 0) return false;
+    const hasUnreached = fMilestones.some((m) => !m.reached);
+    return hasUnreached && f.balance > 0;
   });
 
   const openRedistribute = (fundId: number) => {
@@ -169,12 +165,14 @@ export default function FundsPage() {
                 <div className="h-px bg-border-subtle mb-4" />
 
                 <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-txt-secondary">Recurring needs</span>
-                    <span className="font-mono text-loss">
-                      {formatCurrency(committedNeeds)}
-                    </span>
-                  </div>
+                  {committedNeeds > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-txt-secondary">Recurring needs</span>
+                      <span className="font-mono text-loss">
+                        {formatCurrency(committedNeeds)}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-txt-secondary">Spent</span>
                     <span className="font-mono text-loss">
@@ -320,17 +318,56 @@ function ConfigModal({
   const [pctValues, setPctValues] = useState<Record<number, string>>(
     Object.fromEntries(funds.map((f) => [f.id, String(f.allocation_pct)]))
   );
+  const [locked, setLocked] = useState<Record<number, boolean>>(
+    Object.fromEntries(funds.map((f) => [f.id, f.allocation_locked]))
+  );
   const [toast, setToast] = useState('');
 
   const totalPct = Object.values(pctValues).reduce((s, v) => s + (parseFloat(v) || 0), 0);
-  const valid = totalPct === 100;
+  const valid = Math.round(totalPct) === 100;
+
+  const handleSliderChange = useCallback((fundId: number, newValue: string) => {
+    const newVal = Math.min(100, Math.max(0, parseFloat(newValue) || 0));
+
+    const otherFunds = funds.filter((f) => f.id !== fundId && !locked[f.id]);
+    const lockedTotal = funds
+      .filter((f) => f.id !== fundId && locked[f.id])
+      .reduce((s, f) => s + (parseFloat(pctValues[f.id]) || 0), 0);
+
+    const remainder = 100 - newVal - lockedTotal;
+    const otherTotal = otherFunds.reduce((s, f) => s + (parseFloat(pctValues[f.id]) || 0), 0);
+
+    setPctValues((prev) => {
+      const next: Record<number, string> = { ...prev, [fundId]: String(newVal) };
+      if (otherTotal <= 0 || remainder <= 0) {
+        for (const f of otherFunds) next[f.id] = '0';
+      } else {
+        for (const f of otherFunds) {
+          const cur = parseFloat(prev[f.id]) || 0;
+          next[f.id] = String(round2((cur / otherTotal) * Math.max(0, remainder)));
+        }
+      }
+      return next;
+    });
+  }, [funds, locked, pctValues]);
+
+  const toggleLock = (fundId: number) => {
+    setLocked((prev) => ({ ...prev, [fundId]: !prev[fundId] }));
+  };
 
   const save = () => {
     if (!valid) return;
     for (const fund of funds) {
       const val = parseFloat(pctValues[fund.id]);
       if (isNaN(val)) continue;
-      dispatch({ type: 'UPDATE_FUND', payload: { ...fund, allocation_pct: round2(val) } });
+      dispatch({
+        type: 'UPDATE_FUND',
+        payload: {
+          ...fund,
+          allocation_pct: round2(val),
+          allocation_locked: !!locked[fund.id],
+        },
+      });
     }
     setToast('Allocation updated');
     setTimeout(() => { setToast(''); onClose(); }, 1000);
@@ -339,32 +376,47 @@ function ConfigModal({
   return (
     <Modal open={open} onClose={onClose} title="Configure Fund Allocation">
       <p className="text-base text-txt-secondary mb-6">
-        Set the percentage split for incoming income. Must sum to 100%.
+        Drag one slider — unlocked funds rebalance proportionally. Lock funds to freeze their %. Must sum to 100%.
       </p>
       <div className="space-y-4">
-        {funds.map((f) => (
-          <div key={f.id}>
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center gap-2">
-                <div className="h-3 w-3 rounded-full" style={{ backgroundColor: f.color }} />
-                <label className="text-base text-txt-primary">{f.name}</label>
+        {funds.map((f) => {
+          const isLocked = !!locked[f.id];
+          return (
+            <div key={f.id}>
+              <div className="flex items-center justify-between mb-1.5">
+                <div className="flex items-center gap-2">
+                  <div className="h-3 w-3 rounded-full" style={{ backgroundColor: f.color }} />
+                  <label className="text-base text-txt-primary">{f.name}</label>
+                  {isLocked && (
+                    <span className="text-[10px] text-txt-secondary bg-white/[0.06] px-1.5 py-0.5 rounded">locked</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-base text-txt-secondary">{parseFloat(pctValues[f.id] || '0').toFixed(1)}%</span>
+                  <button
+                    onClick={() => toggleLock(f.id)}
+                    className={`text-sm cursor-pointer transition-colors ${isLocked ? 'text-brand' : 'text-txt-secondary/40 hover:text-txt-secondary'}`}
+                    title={isLocked ? 'Unlock allocation' : 'Lock allocation'}
+                  >
+                    {isLocked ? '🔒' : '🔓'}
+                  </button>
+                </div>
               </div>
-              <span className="font-mono text-base text-txt-secondary">{pctValues[f.id] || 0}%</span>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                value={pctValues[f.id] || 0}
+                onChange={(e) => handleSliderChange(f.id, e.target.value)}
+                className="w-full h-2 rounded-full appearance-none bg-white/[0.06] accent-brand cursor-pointer"
+              />
             </div>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={pctValues[f.id] || 0}
-              onChange={(e) => setPctValues((prev) => ({ ...prev, [f.id]: e.target.value }))}
-              className="w-full h-2 rounded-full appearance-none bg-white/[0.06] accent-brand cursor-pointer"
-            />
-          </div>
-        ))}
+          );
+        })}
         <div className="flex justify-between text-base mt-2">
           <span className="text-txt-secondary">Total</span>
           <span className={`font-mono font-semibold ${valid ? 'text-gain' : 'text-loss'}`}>
-            {totalPct}%
+            {totalPct.toFixed(1)}%
           </span>
         </div>
         <div className="flex justify-end gap-3 pt-3">
