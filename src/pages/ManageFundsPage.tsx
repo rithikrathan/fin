@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import type { Fund } from '../types';
@@ -10,6 +10,7 @@ import Modal from '../components/shared/Modal';
 import EmptyState from '../components/shared/EmptyState';
 
 const PRESET_COLORS = ['#FF2A2A', '#A78BFA', '#4ADE80', '#F59E0B', '#3B82F6', '#EC4899', '#06B6D4', '#F97316'];
+const PROTECTED_NAMES = ['needs', 'wants', 'savings'];
 
 export default function ManageFundsPage() {
   const { state, dispatch } = useApp();
@@ -35,6 +36,11 @@ export default function ManageFundsPage() {
   };
 
   const handleDelete = (fund: Fund) => {
+    if (PROTECTED_NAMES.includes(fund.name)) {
+      showToast('Default funds cannot be deleted');
+      setDeleteConfirm(null);
+      return;
+    }
     if (fund.balance !== 0) {
       showToast('Transfer balance to another fund before deleting');
       setDeleteConfirm(null);
@@ -78,6 +84,7 @@ export default function ManageFundsPage() {
               .sort((a, b) => a.date.localeCompare(b.date));
             const firstSnap = snapshots[0]?.balance || fund.balance;
             const growth = fund.balance - firstSnap;
+            const isProtected = PROTECTED_NAMES.includes(fund.name);
 
             return (
               <Card
@@ -92,8 +99,13 @@ export default function ManageFundsPage() {
                       style={{ backgroundColor: fund.color }}
                     />
                     <div className="min-w-0">
-                      <div className="text-base font-semibold text-txt-primary">
-                        {fund.name}
+                      <div className="flex items-center gap-2">
+                        <span className="text-base font-semibold text-txt-primary">
+                          {fund.name}
+                        </span>
+                        {isProtected && (
+                          <Badge color="bg-white/5 text-txt-secondary">default</Badge>
+                        )}
                       </div>
                       <div className="font-mono text-2xl font-bold text-txt-primary min-w-0 break-all">
                         {formatCurrency(fund.balance)}
@@ -108,12 +120,14 @@ export default function ManageFundsPage() {
                     >
                       Edit
                     </button>
-                    <button
-                      onClick={(e) => { e.stopPropagation(); setDeleteConfirm(fund); }}
-                      className="text-sm text-txt-secondary hover:text-red-400 transition-colors cursor-pointer"
-                    >
-                      Del
-                    </button>
+                    {!isProtected && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setDeleteConfirm(fund); }}
+                        className="text-sm text-txt-secondary hover:text-red-400 transition-colors cursor-pointer"
+                      >
+                        Del
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -186,17 +200,79 @@ function FundFormModal({
   existingFunds: Fund[];
   dispatch: React.Dispatch<import('../types').AppAction>;
 }) {
-  const [name, setName] = useState(editing?.name || '');
-  const [color, setColor] = useState(editing?.color || PRESET_COLORS[existingFunds.length % PRESET_COLORS.length]);
-  const [pct, setPct] = useState(String(editing?.allocation_pct || 0));
-  const [deadline, setDeadline] = useState(editing?.deadline || '');
-  const [goalAmount, setGoalAmount] = useState(editing?.goal_amount ? String(editing.goal_amount) : '');
+  const [name, setName] = useState('');
+  const [color, setColor] = useState(PRESET_COLORS[0]);
+  const [pct, setPct] = useState('0');
+  const [deadline, setDeadline] = useState('');
+  const [goalAmount, setGoalAmount] = useState('');
+  const [interestRate, setInterestRate] = useState('');
+  const [interestFrequency, setInterestFrequency] = useState<string>('');
+  const [interestCalcType, setInterestCalcType] = useState<string>('');
   const [toast, setToast] = useState('');
+  const [nameError, setNameError] = useState('');
 
-  const totalPct = existingFunds.reduce((s, f) => s + (editing && f.id === editing.id ? parseFloat(pct) || 0 : f.allocation_pct), 0);
+  const isCreating = !editing;
+
+  useEffect(() => {
+    if (open) {
+      setName(editing?.name || '');
+      setColor(editing?.color || PRESET_COLORS[existingFunds.length % PRESET_COLORS.length]);
+      setPct(String(editing?.allocation_pct || 0));
+      setDeadline(editing?.deadline || '');
+      setGoalAmount(editing?.goal_amount ? String(editing.goal_amount) : '');
+      setInterestRate(editing?.interest_rate != null ? String(editing.interest_rate) : '');
+      setInterestFrequency(editing?.interest_frequency || '');
+      setInterestCalcType(editing?.interest_calc_type || '');
+      setNameError('');
+    }
+  }, [editing, open, existingFunds.length]);
+
+  const newPct = parseFloat(pct) || 0;
+
+  const otherFunds = isCreating
+    ? existingFunds
+    : existingFunds.filter((f) => f.id !== editing!.id);
+
+  const otherTotal = otherFunds.reduce((s, f) => s + f.allocation_pct, 0);
+
+  const rebalancedPcts = isCreating && newPct > 0
+    ? (() => {
+        const remainder = 100 - newPct;
+        if (otherTotal === 0 || remainder <= 0) {
+          return Object.fromEntries(otherFunds.map((f) => [f.id, 0]));
+        }
+        return Object.fromEntries(
+          otherFunds.map((f) => [f.id, round2((f.allocation_pct / otherTotal) * remainder)])
+        );
+      })()
+    : {};
+
+  const totalPct = isCreating
+    ? newPct + Object.values(rebalancedPcts).reduce((s, v) => s + v, 0)
+    : existingFunds.reduce((s, f) => s + (f.id === editing!.id ? newPct : f.allocation_pct), 0);
+
+  const handleNameChange = (val: string) => {
+    setName(val);
+    setNameError('');
+    const trimmed = val.trim().toLowerCase();
+    if (trimmed) {
+      const duplicate = existingFunds.some(
+        (f) => f.name === trimmed && (!editing || f.id !== editing.id)
+      );
+      if (duplicate) setNameError('A fund with this name already exists');
+    }
+  };
 
   const save = () => {
     if (!name.trim()) return;
+    const trimmed = name.trim().toLowerCase();
+    const duplicate = existingFunds.some(
+      (f) => f.name === trimmed && (!editing || f.id !== editing.id)
+    );
+    if (duplicate) {
+      setNameError('A fund with this name already exists');
+      return;
+    }
     const pctVal = parseFloat(pct) || 0;
 
     if (editing) {
@@ -204,11 +280,15 @@ function FundFormModal({
         type: 'UPDATE_FUND',
         payload: {
           ...editing,
-          name: name.trim().toLowerCase(),
+          name: trimmed,
           color,
           allocation_pct: round2(pctVal),
+          allocation_locked: editing.allocation_locked,
           deadline: deadline || null,
           goal_amount: goalAmount ? round2(parseFloat(goalAmount)) : null,
+          interest_rate: interestRate ? round2(parseFloat(interestRate)) : null,
+          interest_frequency: (interestFrequency || null) as 'daily' | 'weekly' | 'monthly' | 'yearly' | null,
+          interest_calc_type: (interestCalcType || null) as 'compound' | 'simple' | null,
         },
       });
       setToast('Fund updated');
@@ -218,14 +298,24 @@ function FundFormModal({
         type: 'ADD_FUND',
         payload: {
           id: maxId + 1,
-          name: name.trim().toLowerCase(),
+          name: trimmed,
           balance: 0,
           allocation_pct: round2(pctVal),
+          allocation_locked: false,
           color,
           deadline: deadline || null,
           goal_amount: goalAmount ? round2(parseFloat(goalAmount)) : null,
+          interest_rate: interestRate ? round2(parseFloat(interestRate)) : null,
+          interest_frequency: (interestFrequency || null) as 'daily' | 'weekly' | 'monthly' | 'yearly' | null,
+          interest_calc_type: (interestCalcType || null) as 'compound' | 'simple' | null,
         },
       });
+      for (const f of otherFunds) {
+        const rebal = rebalancedPcts[f.id] ?? f.allocation_pct;
+        if (rebal !== f.allocation_pct) {
+          dispatch({ type: 'UPDATE_FUND', payload: { ...f, allocation_pct: round2(rebal) } });
+        }
+      }
       setToast('Fund created');
     }
     setTimeout(() => { setToast(''); onClose(); }, 800);
@@ -238,10 +328,15 @@ function FundFormModal({
           <label className="block text-xs text-txt-secondary mb-1">Name</label>
           <input
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => handleNameChange(e.target.value)}
             placeholder="e.g. emergency, vacation"
-            className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
+            className={`w-full bg-white/[0.04] border rounded-lg px-3 py-2 text-sm text-txt-primary placeholder:text-txt-secondary/50 outline-none transition-colors ${
+              nameError ? 'border-red-400/60 focus:border-red-400' : 'border-border-subtle focus:border-brand/50'
+            }`}
           />
+          {nameError && (
+            <p className="text-xs text-red-400 mt-1">{nameError}</p>
+          )}
         </div>
 
         <div>
@@ -270,9 +365,39 @@ function FundFormModal({
           />
           <div className="flex justify-between mt-1 text-xs">
             <span className="text-txt-secondary">Total across all funds</span>
-            <span className={`font-mono ${totalPct === 100 ? 'text-gain' : 'text-loss'}`}>{totalPct}%</span>
+            <span className={`font-mono ${Math.round(totalPct) === 100 ? 'text-gain' : 'text-loss'}`}>{Math.round(totalPct)}%</span>
           </div>
         </div>
+
+        {isCreating && newPct > 0 && otherFunds.length > 0 && (
+          <div className="bg-white/[0.03] rounded-lg p-3">
+            <div className="text-xs text-txt-secondary mb-2">Other funds will be rebalanced:</div>
+            <div className="space-y-1.5">
+              {otherFunds.map((f) => {
+                const rebal = rebalancedPcts[f.id] ?? f.allocation_pct;
+                const diff = rebal - f.allocation_pct;
+                return (
+                  <div key={f.id} className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: f.color }} />
+                      <span className="text-txt-secondary">{f.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2 font-mono">
+                      <span className="text-txt-secondary">{f.allocation_pct}%</span>
+                      <span className="text-txt-secondary">→</span>
+                      <span className="text-txt-primary">{rebal}%</span>
+                      {diff !== 0 && (
+                        <span className={diff > 0 ? 'text-gain' : 'text-loss'}>
+                          ({diff > 0 ? '+' : ''}{diff.toFixed(1)})
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div>
           <label className="block text-xs text-txt-secondary mb-1">Deadline (optional)</label>
@@ -305,9 +430,53 @@ function FundFormModal({
           </div>
         )}
 
+        <div className="border-t border-border-subtle pt-4 mt-2">
+          <div className="text-xs text-txt-secondary uppercase tracking-widest mb-3">Interest (optional)</div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs text-txt-secondary mb-1">Rate % p.a.</label>
+              <input
+                type="number"
+                value={interestRate}
+                onChange={(e) => setInterestRate(e.target.value)}
+                placeholder="e.g. 7"
+                min="0"
+                step="0.1"
+                className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary font-mono placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-txt-secondary mb-1">Frequency</label>
+              <select
+                value={interestFrequency}
+                onChange={(e) => setInterestFrequency(e.target.value)}
+                className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary outline-none focus:border-brand/50 transition-colors"
+              >
+                <option value="">None</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+                <option value="yearly">Yearly</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-txt-secondary mb-1">Type</label>
+              <select
+                value={interestCalcType}
+                onChange={(e) => setInterestCalcType(e.target.value)}
+                className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary outline-none focus:border-brand/50 transition-colors"
+              >
+                <option value="">None</option>
+                <option value="compound">Compound</option>
+                <option value="simple">Simple</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" onClick={save} disabled={!name.trim()}>
+          <Button variant="primary" onClick={save} disabled={!name.trim() || !!nameError || Math.round(totalPct) !== 100}>
             {editing ? 'Save Changes' : 'Create Fund'}
           </Button>
         </div>
