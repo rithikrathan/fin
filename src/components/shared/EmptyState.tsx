@@ -12,8 +12,8 @@ export default function EmptyState({
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
       <span className="text-5xl mb-5 opacity-30">{icon}</span>
-      <h3 className="text-2xl font-semibold text-txt-primary mb-3">{title}</h3>
-      <p className="text-lg text-txt-secondary max-w-md mb-8">{description}</p>
+      <h3 className="text-xl sm:text-2xl font-semibold text-txt-primary mb-3">{title}</h3>
+      <p className="text-base sm:text-lg text-txt-secondary max-w-md mb-8">{description}</p>
       {action && (
         <button
           onClick={action.onClick}
