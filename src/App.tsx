@@ -6,6 +6,8 @@ import DashboardPage from './pages/DashboardPage';
 import TransactionsPage from './pages/TransactionsPage';
 import NeedsPage from './pages/NeedsPage';
 import FundsPage from './pages/FundsPage';
+import ManageFundsPage from './pages/ManageFundsPage';
+import FundDetailPage from './pages/FundDetailPage';
 import ExpensesPage from './pages/ExpensesPage';
 import WantsPage from './pages/WantsPage';
 import InvestmentsPage from './pages/InvestmentsPage';
@@ -24,6 +26,8 @@ export default function App() {
             <Route path="/needs" element={<Navigate to="/funds/needs" replace />} />
             <Route path="/wants" element={<Navigate to="/funds/wants" replace />} />
             <Route path="/funds" element={<FundsPage />} />
+            <Route path="/funds/manage" element={<ManageFundsPage />} />
+            <Route path="/funds/:id" element={<FundDetailPage />} />
             <Route path="/funds/needs" element={<NeedsPage />} />
             <Route path="/funds/wants" element={<WantsPage />} />
             <Route path="/expenses" element={<ExpensesPage />} />

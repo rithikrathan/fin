@@ -367,10 +367,26 @@ function AddExpenseModal({
         </div>
         <div>
           <label className="block text-xs text-txt-secondary mb-1">Category</label>
+          <div className="flex gap-1.5 mb-2 flex-wrap">
+            {['Snacks', 'Transport', 'Shopping', 'Health', 'Miscellaneous'].map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setCategory(cat)}
+                className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
+                  category === cat
+                    ? 'bg-brand/15 border-brand/30 text-brand'
+                    : 'bg-white/[0.02] border-border-subtle text-txt-secondary hover:text-txt-primary'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
           <input
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            placeholder="e.g. Groceries, Rent"
+            placeholder="Or type a custom category"
             className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
           />
         </div>

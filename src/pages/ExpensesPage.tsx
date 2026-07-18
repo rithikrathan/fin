@@ -15,6 +15,8 @@ export default function ExpensesPage() {
   const totalSpent = expenses.reduce((s, e) => s + e.amount, 0);
   const planned = expenses.filter((e) => e.planned);
   const unplanned = expenses.filter((e) => !e.planned);
+  const misc = expenses.filter((e) => e.is_misc);
+  const miscTotal = misc.reduce((s, e) => s + e.amount, 0);
 
   const byCategory = expenses.reduce(
     (acc, e) => {
@@ -32,7 +34,7 @@ export default function ExpensesPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Card className="p-4 text-center">
           <div className="text-xs text-txt-secondary mb-1">Total Spent</div>
           <div className="font-mono text-xl font-bold text-loss">
@@ -49,6 +51,15 @@ export default function ExpensesPage() {
           <div className="text-xs text-txt-secondary mb-1">Unplanned</div>
           <div className="font-mono text-xl font-bold text-amber-400">
             {formatCurrency(unplanned.reduce((s, e) => s + e.amount, 0))}
+          </div>
+        </Card>
+        <Card className="p-4 text-center">
+          <div className="text-xs text-txt-secondary mb-1">Miscellaneous</div>
+          <div className="font-mono text-xl font-bold text-txt-primary">
+            {formatCurrency(miscTotal)}
+          </div>
+          <div className="text-[10px] text-txt-secondary mt-0.5">
+            {misc.length} items
           </div>
         </Card>
       </div>
@@ -139,6 +150,9 @@ export default function ExpensesPage() {
                     {e.description}
                   </span>
                   <Badge color="bg-white/5 text-txt-secondary">{e.category}</Badge>
+                  {e.is_misc && (
+                    <Badge color="bg-amber-500/10 text-amber-400">Misc</Badge>
+                  )}
                   <Badge
                     color={
                       e.planned

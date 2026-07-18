@@ -5,6 +5,7 @@ import { formatCurrency, round2 } from '../utils/helpers';
 import Card from '../components/shared/Card';
 import Button from '../components/shared/Button';
 import Modal from '../components/shared/Modal';
+import SurplusRedistributeModal from '../components/funds/SurplusRedistributeModal';
 import {
   PieChart,
   Pie,
@@ -17,6 +18,8 @@ export default function FundsPage() {
   const { state, dispatch } = useApp();
   const navigate = useNavigate();
   const [configOpen, setConfigOpen] = useState(false);
+  const [redistributeOpen, setRedistributeOpen] = useState(false);
+  const [redistributeFundId, setRedistributeFundId] = useState<number | null>(null);
 
   const total = state.funds.reduce((s, f) => s + f.balance, 0);
 
@@ -29,8 +32,39 @@ export default function FundsPage() {
   const pendingWants = state.wants.filter((w) => !w.purchased).length;
   const activeNeeds = state.needs.filter((n) => n.active).length;
 
+  const fundsWithSurplus = state.funds.filter((f) => {
+    const committed = state.needs
+      .filter((n) => n.fund_id === f.id && n.active)
+      .reduce((s, n) => {
+        if (n.frequency === 'monthly') return s + n.amount;
+        if (n.frequency === 'weekly') return s + n.amount * 4;
+        if (n.frequency === 'yearly') return s + n.amount / 12;
+        return s + n.amount;
+      }, 0);
+    return f.balance > committed;
+  });
+
+  const openRedistribute = (fundId: number) => {
+    setRedistributeFundId(fundId);
+    setRedistributeOpen(true);
+  };
+
   return (
     <div className="max-w-5xl mx-auto space-y-8">
+      {/* Surplus banner */}
+      {fundsWithSurplus.length > 0 && (
+        <div className="bg-gain/5 border border-gain/20 rounded-xl p-4 flex items-center justify-between">
+          <div className="text-sm text-txt-secondary">
+            {fundsWithSurplus.length === 1
+              ? `₹${round2(fundsWithSurplus[0].balance).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })} surplus in ${fundsWithSurplus[0].name}`
+              : `${fundsWithSurplus.length} funds have surplus`}
+          </div>
+          <Button variant="secondary" size="sm" onClick={() => openRedistribute(fundsWithSurplus[0].id)}>
+            Redistribute
+          </Button>
+        </div>
+      )}
+
       {/* Pie Chart + Fund Cards */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Pie */}
@@ -73,7 +107,7 @@ export default function FundsPage() {
               No funds to display
             </div>
           )}
-          <div className="flex gap-5 mt-4">
+          <div className="flex gap-5 mt-4 flex-wrap justify-center">
             {state.funds.map((f) => (
               <div key={f.id} className="flex items-center gap-2 text-sm">
                 <div
@@ -110,7 +144,11 @@ export default function FundsPage() {
             const surplus = fund.balance - committedNeeds;
 
             return (
-              <Card key={fund.id} className="p-5">
+              <Card
+                key={fund.id}
+                className="p-5 cursor-pointer hover:bg-white/[0.03] transition-all"
+                onClick={() => navigate(`/funds/${fund.id}`)}
+              >
                 <div className="flex items-center gap-2.5 mb-4">
                   <div
                     className="h-4 w-4 rounded-full"
@@ -169,6 +207,12 @@ export default function FundsPage() {
                     />
                   </div>
                 </div>
+
+                {fund.deadline && (
+                  <div className="mt-3 text-xs text-txt-secondary">
+                    Deadline: {new Date(fund.deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </div>
+                )}
               </Card>
             );
           })}
@@ -176,7 +220,7 @@ export default function FundsPage() {
       </div>
 
       {/* Quick links to Wants + Needs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
         <Card
           className="p-6 cursor-pointer hover:bg-white/[0.03] transition-all border-border-subtle"
           onClick={() => navigate('/funds/wants')}
@@ -216,6 +260,26 @@ export default function FundsPage() {
             <span className="text-3xl opacity-30">→</span>
           </div>
         </Card>
+
+        <Card
+          className="p-6 cursor-pointer hover:bg-white/[0.03] transition-all border-border-subtle"
+          onClick={() => navigate('/funds/manage')}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm text-txt-secondary uppercase tracking-widest mb-2">
+                Manage
+              </div>
+              <div className="font-mono text-2xl font-bold text-txt-primary">
+                {state.funds.length} funds
+              </div>
+              <div className="text-sm text-txt-secondary mt-1">
+                Create, edit, allocate
+              </div>
+            </div>
+            <span className="text-3xl opacity-30">→</span>
+          </div>
+        </Card>
       </div>
 
       <div className="flex justify-end">
@@ -230,6 +294,14 @@ export default function FundsPage() {
         funds={state.funds}
         dispatch={dispatch}
       />
+
+      {redistributeFundId !== null && (
+        <SurplusRedistributeModal
+          open={redistributeOpen}
+          onClose={() => { setRedistributeOpen(false); setRedistributeFundId(null); }}
+          sourceFundId={redistributeFundId}
+        />
+      )}
     </div>
   );
 }
