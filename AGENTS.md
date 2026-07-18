@@ -34,15 +34,15 @@ A personal finance manager — full-stack web app with Android support. Tracks i
 
 On the first message of every session, **before doing anything else**, read these files to orient yourself:
 
-1. **Documentation index:** `/mnt/sda4/projects/notes/financeManager/index.md`
-2. **Architecture:** `/mnt/sda4/projects/notes/financeManager/architecture.md`
-3. **Data structures:** `/mnt/sda4/projects/notes/financeManager/data_structures.md`
+1. **Documentation index:** `/mnt/sda4/projects/notes/fin/index.md`
+2. **Architecture:** `/mnt/sda4/projects/notes/fin/architecture.md`
+3. **Data structures:** `/mnt/sda4/projects/notes/fin/data_structures.md`
 4. **Project state:** `ls` the project root to see what exists (`src/`, `backend/`, `package.json`, `go.mod`, etc.)
 
 Only after reading these should you respond to the user. This ensures you understand the full system before making any changes. If additional docs are relevant to the specific task (e.g. [[fund_system]] for fund-related changes, [[reports]] for report work), read those too.
 
 ## Documentation (Notes)
-- **Location:** `/mnt/sda4/projects/notes/financeManager/`
+- **Location:** `/mnt/sda4/projects/notes/fin/`
 - This folder is the **primary reference** for architecture, data structures, and component specs.
 - If there is a conflict between code and notes, **notes take priority** — the notes document the intended final product.
 
@@ -62,7 +62,7 @@ Only after reading these should you respond to the user. This ensures you unders
 ## Source Structure
 
 ```
-financeManager/
+fin/
 ├── src/                    React frontend
 │   ├── components/         UI components
 │   │   ├── dashboard/      Overview, summary cards
