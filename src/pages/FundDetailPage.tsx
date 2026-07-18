@@ -2,13 +2,12 @@ import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import type { Milestone } from '../types';
-import { formatCurrency, formatDate, generateId, round2, calculateMonthlyRequired, getMonthsRemaining } from '../utils/helpers';
+import { formatCurrency, formatDate, generateId, round2, calculateMonthlyRequired, getMonthsRemaining, calculateAccruedInterest } from '../utils/helpers';
 import Card from '../components/shared/Card';
 import Button from '../components/shared/Button';
 import Badge from '../components/shared/Badge';
 import Modal from '../components/shared/Modal';
 import {
-  AreaChart,
   Area,
   XAxis,
   YAxis,
@@ -16,6 +15,8 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
+  Line,
+  ComposedChart,
 } from 'recharts';
 
 export default function FundDetailPage() {
@@ -48,22 +49,58 @@ export default function FundDetailPage() {
     return false;
   }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
+  const monthlyIncome = state.settings.expected_monthly_income;
+  const scaleAmount = state.settings.scale_amount;
+  const monthlyFromIncome = round2((monthlyIncome * fund.allocation_pct) / 100);
+
+  const unreachedMilestones = milestones.filter((m) => !m.reached);
+  const reachedMilestones = milestones.filter((m) => m.reached);
+  const hasMilestones = milestones.length > 0;
+
   const chartData = useMemo(() => {
     if (snapshots.length === 0) return [];
-    return snapshots.map((s) => ({
+    const historical = snapshots.map((s) => ({
       date: s.date,
       balance: s.balance,
+      projected: null as number | null,
+      scaleProjected: null as number | null,
     }));
-  }, [snapshots]);
+
+    const lastSnap = snapshots[snapshots.length - 1];
+    const lastDate = new Date(lastSnap.date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (monthlyFromIncome > 0 || scaleAmount > 0) {
+      const projectionMonths = 12;
+      let incomeProj = lastSnap.balance;
+      let scaleProj = lastSnap.balance;
+
+      for (let i = 1; i <= projectionMonths; i++) {
+        const d = new Date(lastDate);
+        d.setMonth(d.getMonth() + i);
+        const dateStr = d.toISOString().split('T')[0];
+        if (d > today) {
+          if (monthlyFromIncome > 0) incomeProj = round2(incomeProj + monthlyFromIncome);
+          if (scaleAmount > 0) scaleProj = round2(scaleProj + scaleAmount);
+          historical.push({
+            date: dateStr,
+            balance: null as unknown as number,
+            projected: monthlyFromIncome > 0 ? incomeProj : null,
+            scaleProjected: scaleAmount > 0 ? scaleProj : null,
+          });
+        }
+      }
+    }
+
+    return historical;
+  }, [snapshots, monthlyFromIncome, scaleAmount]);
 
   const monthlyRequired = fund.deadline && fund.goal_amount
     ? calculateMonthlyRequired(fund.goal_amount, fund.balance, fund.deadline)
     : null;
   const monthsLeft = fund.deadline ? getMonthsRemaining(fund.deadline) : null;
   const goalProgress = fund.goal_amount ? Math.min(100, (fund.balance / fund.goal_amount) * 100) : null;
-
-  const reachedMilestones = milestones.filter((m) => m.reached);
-  const unreachedMilestones = milestones.filter((m) => !m.reached);
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -80,6 +117,49 @@ export default function FundDetailPage() {
           {formatCurrency(fund.balance)}
         </div>
       </div>
+
+      {/* Inflow rate (all funds) */}
+      {monthlyFromIncome > 0 && (
+        <Card className="p-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-xs text-txt-secondary uppercase tracking-widest mb-1">Monthly Inflow</div>
+              <div className="font-mono text-xl font-bold text-gain">{formatCurrency(monthlyFromIncome)}/mo</div>
+            </div>
+            <div className="text-right text-xs text-txt-secondary">
+              <div>{fund.allocation_pct}% of {formatCurrency(monthlyIncome)}</div>
+              {scaleAmount > 0 && <div className="mt-1">Scale: {formatCurrency(scaleAmount)}/mo</div>}
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* Accrued interest */}
+      {fund.interest_rate && fund.interest_frequency && fund.interest_calc_type && snapshots.length > 0 && (() => {
+        const lastSnap = snapshots[snapshots.length - 1];
+        const { interest } = calculateAccruedInterest(
+          fund.balance, fund.interest_rate, fund.interest_frequency, fund.interest_calc_type, lastSnap.date
+        );
+        const projectedBalance = round2(fund.balance + interest);
+        return interest > 0 ? (
+          <Card className="p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs text-txt-secondary uppercase tracking-widest mb-1">Accrued Interest</div>
+                <div className="font-mono text-xl font-bold text-gain">+{formatCurrency(interest)}</div>
+                <div className="text-xs text-txt-secondary mt-1">
+                  Projected balance: <span className="font-mono text-gain">{formatCurrency(projectedBalance)}</span>
+                </div>
+              </div>
+              <div className="text-right text-xs text-txt-secondary">
+                <div>{fund.interest_rate}% p.a. · {fund.interest_calc_type}</div>
+                <div>{fund.interest_frequency} compounding</div>
+                <div className="mt-1">Since {formatDate(lastSnap.date)}</div>
+              </div>
+            </div>
+          </Card>
+        ) : null;
+      })()}
 
       {/* Goal tracker */}
       {fund.goal_amount && (
@@ -124,12 +204,72 @@ export default function FundDetailPage() {
         </Card>
       )}
 
-      {/* Balance history chart */}
+      {/* Milestone predictions (only for funds with milestones) */}
+      {hasMilestones && unreachedMilestones.length > 0 && (monthlyFromIncome > 0 || scaleAmount > 0) && (
+        <Card className="p-6">
+          <h3 className="text-lg font-bold text-txt-primary mb-4">Milestone Predictions</h3>
+          <div className="space-y-3">
+            {unreachedMilestones.map((m) => {
+              const remaining = Math.max(0, m.target_amount - fund.balance);
+              const incomeMonths = monthlyFromIncome > 0 ? Math.ceil(remaining / monthlyFromIncome) : null;
+              const scaleMonths = scaleAmount > 0 ? Math.ceil(remaining / scaleAmount) : null;
+
+              return (
+                <div key={m.id} className="bg-white/[0.03] rounded-xl p-4 border border-border-subtle">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-txt-primary">{m.name}</span>
+                    <span className="font-mono text-xs text-txt-secondary">{formatCurrency(m.target_amount)}</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    {incomeMonths !== null && incomeMonths > 0 && (
+                      <div className="bg-white/[0.03] rounded-lg p-3">
+                        <div className="text-[10px] text-txt-secondary uppercase tracking-wider mb-1">Via Income Allocation</div>
+                        <div className="font-mono text-sm font-semibold text-gain">
+                          {incomeMonths >= 12 ? `${(incomeMonths / 12).toFixed(1)} years` : `${incomeMonths} months`}
+                        </div>
+                        <div className="text-[10px] text-txt-secondary mt-0.5">
+                          At {formatCurrency(monthlyFromIncome)}/mo
+                        </div>
+                      </div>
+                    )}
+                    {scaleMonths !== null && scaleMonths > 0 && (
+                      <div className="bg-white/[0.03] rounded-lg p-3">
+                        <div className="text-[10px] text-txt-secondary uppercase tracking-wider mb-1">Via Scale Amount</div>
+                        <div className="font-mono text-sm font-semibold text-gain">
+                          {scaleMonths >= 12 ? `${(scaleMonths / 12).toFixed(1)} years` : `${scaleMonths} months`}
+                        </div>
+                        <div className="text-[10px] text-txt-secondary mt-0.5">
+                          At {formatCurrency(scaleAmount)}/mo
+                        </div>
+                      </div>
+                    )}
+                    {incomeMonths !== null && incomeMonths > 0 && fund.deadline && (
+                      <div className="col-span-2 text-[10px] text-txt-secondary">
+                        {incomeMonths <= (monthsLeft || Infinity)
+                          ? <span className="text-gain">On track — deadline is {monthsLeft} months away</span>
+                          : <span className="text-loss">Behind — deadline is {monthsLeft} months away, needs {formatCurrency(remaining / Math.max(1, monthsLeft || 1))}/mo</span>
+                        }
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
+      {/* Balance history chart with projections */}
       {chartData.length > 1 && (
         <Card className="p-6">
-          <h3 className="text-lg font-bold text-txt-primary mb-4">Balance History</h3>
+          <h3 className="text-lg font-bold text-txt-primary mb-4">
+            Balance History
+            {(monthlyFromIncome > 0 || scaleAmount > 0) && (
+              <span className="text-sm font-normal text-txt-secondary ml-2">+ 12-month projection</span>
+            )}
+          </h3>
           <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
+            <ComposedChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
               <defs>
                 <linearGradient id={`grad-${fund.id}`} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={fund.color} stopOpacity={0.35} />
@@ -151,7 +291,7 @@ export default function FundDetailPage() {
                 width={60}
               />
               <Tooltip
-                formatter={(value) => formatCurrency(Number(value))}
+                formatter={(value, name) => value != null ? [formatCurrency(Number(value)), name] : ['', '']}
                 contentStyle={{
                   background: 'rgba(25,25,25,0.9)',
                   border: '1px solid rgba(255,255,255,0.08)',
@@ -168,7 +308,32 @@ export default function FundDetailPage() {
                 stroke={fund.color}
                 strokeWidth={2.5}
                 fill={`url(#grad-${fund.id})`}
+                connectNulls={false}
               />
+              {monthlyFromIncome > 0 && (
+                <Line
+                  type="monotone"
+                  dataKey="projected"
+                  name="Income Projection"
+                  stroke="#4ADE80"
+                  strokeWidth={2}
+                  strokeDasharray="6 4"
+                  dot={false}
+                  connectNulls
+                />
+              )}
+              {scaleAmount > 0 && (
+                <Line
+                  type="monotone"
+                  dataKey="scaleProjected"
+                  name="Scale Projection"
+                  stroke="#A78BFA"
+                  strokeWidth={2}
+                  strokeDasharray="4 4"
+                  dot={false}
+                  connectNulls
+                />
+              )}
               {unreachedMilestones.map((m) => (
                 <ReferenceLine
                   key={m.id}
@@ -187,8 +352,24 @@ export default function FundDetailPage() {
                   label={{ value: 'Goal', position: 'right', fill: fund.color, fontSize: 12, fontWeight: 600 }}
                 />
               )}
-            </AreaChart>
+            </ComposedChart>
           </ResponsiveContainer>
+          {(monthlyFromIncome > 0 || scaleAmount > 0) && (
+            <div className="flex gap-4 mt-3 text-xs text-txt-secondary">
+              {monthlyFromIncome > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <div className="h-0.5 w-4 bg-gain rounded" style={{ borderTop: '2px dashed #4ADE80' }} />
+                  <span>Income ({formatCurrency(monthlyFromIncome)}/mo)</span>
+                </div>
+              )}
+              {scaleAmount > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <div className="h-0.5 w-4 bg-[#A78BFA] rounded" style={{ borderTop: '2px dashed #A78BFA' }} />
+                  <span>Scale ({formatCurrency(scaleAmount)}/mo)</span>
+                </div>
+              )}
+            </div>
+          )}
         </Card>
       )}
 
