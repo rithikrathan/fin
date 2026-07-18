@@ -131,7 +131,7 @@ export default function ManageFundsPage() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4 mt-3 text-xs text-txt-secondary">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 mt-3 text-xs text-txt-secondary">
                   {fund.deadline && (
                     <span>Deadline: {new Date(fund.deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
                   )}
@@ -432,7 +432,7 @@ function FundFormModal({
 
         <div className="border-t border-border-subtle pt-4 mt-2">
           <div className="text-xs text-txt-secondary uppercase tracking-widest mb-3">Interest (optional)</div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-xs text-txt-secondary mb-1">Rate % p.a.</label>
               <input

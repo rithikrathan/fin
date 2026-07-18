@@ -29,7 +29,7 @@ export default function InvestmentsPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="p-4 text-center">
           <div className="text-xs text-txt-secondary mb-1">Total Invested</div>
           <div className="font-mono text-xl font-bold text-txt-primary">

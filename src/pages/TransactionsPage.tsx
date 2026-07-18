@@ -25,7 +25,7 @@ export default function TransactionsPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
           {(['all', 'income', 'expense'] as const).map((f) => (
             <button
@@ -41,7 +41,7 @@ export default function TransactionsPage() {
             </button>
           ))}
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="ghost" size="sm" onClick={() => exportCSV(sorted, state)}>
             CSV
           </Button>

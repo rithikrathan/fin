@@ -105,13 +105,13 @@ export default function FundDetailPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <button onClick={() => navigate('/funds')} className="text-txt-secondary hover:text-txt-primary cursor-pointer text-lg">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <button onClick={() => navigate('/funds')} className="text-txt-secondary hover:text-txt-primary cursor-pointer text-lg shrink-0">
             ←
           </button>
-          <div className="h-5 w-5 rounded-full" style={{ backgroundColor: fund.color }} />
-          <h2 className="text-xl font-bold text-txt-primary uppercase tracking-wider">{fund.name}</h2>
+          <div className="h-5 w-5 rounded-full shrink-0" style={{ backgroundColor: fund.color }} />
+          <h2 className="text-xl font-bold text-txt-primary uppercase tracking-wider truncate">{fund.name}</h2>
         </div>
         <div className="font-mono text-2xl sm:text-3xl font-bold text-txt-primary min-w-0 break-all">
           {formatCurrency(fund.balance)}
@@ -355,7 +355,7 @@ export default function FundDetailPage() {
             </ComposedChart>
           </ResponsiveContainer>
           {(monthlyFromIncome > 0 || scaleAmount > 0) && (
-            <div className="flex gap-4 mt-3 text-xs text-txt-secondary">
+            <div className="flex flex-col sm:flex-row sm:gap-4 mt-3 text-xs text-txt-secondary">
               {monthlyFromIncome > 0 && (
                 <div className="flex items-center gap-1.5">
                   <div className="h-0.5 w-4 bg-gain rounded" style={{ borderTop: '2px dashed #4ADE80' }} />

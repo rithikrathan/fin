@@ -126,13 +126,13 @@ export default function ReportsPage() {
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="flex gap-2 flex-wrap">
           {(['daily', 'weekly', 'monthly', 'yearly'] as const).map((t) => (
             <button
               key={t}
               onClick={() => setReportType(t)}
-              className={`px-4 py-2 rounded-xl text-base font-medium transition-all cursor-pointer ${
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-sm sm:text-base font-medium transition-all cursor-pointer ${
                 reportType === t
                   ? 'bg-brand/15 text-brand'
                   : 'text-txt-secondary hover:text-txt-primary hover:bg-white/[0.04]'
@@ -142,14 +142,14 @@ export default function ReportsPage() {
             </button>
           ))}
         </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={() => setShowHistory((h) => !h)}>
+        <div className="flex gap-2 flex-wrap">
+          <Button variant="secondary" size="sm" onClick={() => setShowHistory((h) => !h)}>
             History ({state.reports.length})
           </Button>
-          <Button variant="secondary" onClick={saveReport}>
-            Save Report
+          <Button variant="secondary" size="sm" onClick={saveReport}>
+            Save
           </Button>
-          <Button variant="primary" onClick={printReport}>
+          <Button variant="primary" size="sm" onClick={printReport}>
             Export PDF
           </Button>
         </div>

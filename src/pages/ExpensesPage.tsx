@@ -145,7 +145,7 @@ export default function ExpensesPage() {
                 key={e.id}
                 className="flex items-center justify-between py-2 border-b border-border-subtle last:border-0"
               >
-                <div className="flex items-center gap-3 min-w-0">
+                <div className="flex items-center gap-2 min-w-0 flex-wrap">
                   <span className="text-sm text-txt-primary truncate">
                     {e.description}
                   </span>
