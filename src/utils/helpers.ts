@@ -73,3 +73,53 @@ export const priorityColors: Record<number, string> = {
   1: 'bg-amber-500/15 text-amber-400',
   2: 'bg-red-500/15 text-red-400',
 };
+
+export function calculateAccruedInterest(
+  balance: number,
+  rate: number | null,
+  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly' | null,
+  calcType: 'compound' | 'simple' | null,
+  sinceDate: string,
+): { interest: number; periodRate: number; periodsElapsed: number } {
+  if (!rate || !frequency || !calcType || balance <= 0 || rate <= 0) {
+    return { interest: 0, periodRate: 0, periodsElapsed: 0 };
+  }
+
+  const now = new Date();
+  const start = new Date(sinceDate);
+  const msElapsed = now.getTime() - start.getTime();
+  if (msElapsed <= 0) return { interest: 0, periodRate: 0, periodsElapsed: 0 };
+
+  const periodsPerYear = frequency === 'daily' ? 365
+    : frequency === 'weekly' ? 52
+    : frequency === 'monthly' ? 12
+    : 1;
+
+  const secondsElapsed = msElapsed / 1000;
+  const secondsPerYear = 365.25 * 24 * 60 * 60;
+  const yearsElapsed = secondsElapsed / secondsPerYear;
+  const periodsElapsed = yearsElapsed * periodsPerYear;
+
+  const periodRate = rate / 100 / periodsPerYear;
+
+  let interest: number;
+  if (calcType === 'compound') {
+    interest = balance * (Math.pow(1 + periodRate, periodsElapsed) - 1);
+  } else {
+    interest = balance * (rate / 100) * yearsElapsed;
+  }
+
+  return { interest: round2(interest), periodRate, periodsElapsed: Math.floor(periodsElapsed) };
+}
+
+export function getNextInterestDate(
+  frequency: 'daily' | 'weekly' | 'monthly' | 'yearly' | null,
+): string | null {
+  if (!frequency) return null;
+  const now = new Date();
+  if (frequency === 'daily') now.setDate(now.getDate() + 1);
+  else if (frequency === 'weekly') now.setDate(now.getDate() + 7);
+  else if (frequency === 'monthly') now.setMonth(now.getMonth() + 1);
+  else if (frequency === 'yearly') now.setFullYear(now.getFullYear() + 1);
+  return now.toISOString().split('T')[0];
+}
