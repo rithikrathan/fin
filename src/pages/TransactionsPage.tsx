@@ -42,6 +42,12 @@ export default function TransactionsPage() {
           ))}
         </div>
         <div className="flex gap-2">
+          <Button variant="ghost" size="sm" onClick={() => exportCSV(sorted, state)}>
+            CSV
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => exportPDF(sorted, state)}>
+            PDF
+          </Button>
           <Button variant="primary" size="sm" onClick={() => setIncomeOpen(true)}>
             + Income
           </Button>
@@ -454,4 +460,80 @@ function AddExpenseModal({
       </form>
     </Modal>
   );
+}
+
+function exportCSV(transactions: import('../types').Transaction[], state: import('../types').AppState) {
+  const header = 'Date,Type,Name/Description,Amount,Fund,Category,Notes';
+  const rows = transactions.map((t) => {
+    if (t.type === 'income') {
+      const alloc = Object.entries(t.fund_allocation)
+        .map(([id, amt]) => {
+          const f = state.funds.find((f) => f.id === Number(id));
+          return `${f?.name || id}: ${amt}`;
+        }).join('; ');
+      return `"${t.date}","Income","${t.name}",${t.amount},"${alloc}","${t.category}","${t.notes}"`;
+    }
+    if (t.type === 'expense') {
+      return `"${t.date}","Expense","${t.description}",${t.amount},"${t.fund_name}","${t.category}","${t.is_misc ? 'misc' : ''}"`;
+    }
+    const from = state.funds.find((f) => f.id === t.from_fund_id);
+    const to = state.funds.find((f) => f.id === t.to_fund_id);
+    return `"${t.date}","Transfer","${t.note}",${t.amount},"${from?.name} → ${to?.name}","",""`;
+  });
+  const csv = [header, ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `transactions-${new Date().toISOString().split('T')[0]}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportPDF(transactions: import('../types').Transaction[], state: import('../types').AppState) {
+  const rows = transactions.map((t) => {
+    let name = '', amount = 0, fund = '', category = '', type = '';
+    if (t.type === 'income') {
+      type = 'Income'; name = t.name; amount = t.amount;
+      fund = Object.entries(t.fund_allocation).map(([id, amt]) => {
+        const f = state.funds.find((f) => f.id === Number(id));
+        return `${f?.name || id}: ₹${amt}`;
+      }).join(', ');
+      category = t.category;
+    } else if (t.type === 'expense') {
+      type = 'Expense'; name = t.description; amount = -t.amount;
+      fund = t.fund_name; category = t.category;
+    } else {
+      const from = state.funds.find((f) => f.id === t.from_fund_id);
+      const to = state.funds.find((f) => f.id === t.to_fund_id);
+      type = 'Transfer'; name = t.note; amount = t.amount;
+      fund = `${from?.name} → ${to?.name}`;
+    }
+    return `<tr>
+      <td>${t.date}</td><td>${type}</td><td>${name}</td>
+      <td style="font-family:monospace;${amount >= 0 ? 'color:#4ADE80' : 'color:#FB923C'}">${amount >= 0 ? '+' : ''}₹${Math.abs(amount).toLocaleString('en-IN')}</td>
+      <td>${fund}</td><td>${category}</td>
+    </tr>`;
+  }).join('');
+
+  const printWin = window.open('', '_blank');
+  if (!printWin) return;
+  printWin.document.write(`<!DOCTYPE html><html><head><title>Transactions</title>
+    <style>
+      *{margin:0;padding:0;box-sizing:border-box}
+      body{font-family:Inter,sans-serif;background:#050505;color:#F4F4F5;padding:40px}
+      h1{font-size:24px;margin-bottom:8px}
+      .sub{color:#A1A1AA;font-size:13px;margin-bottom:24px}
+      table{width:100%;border-collapse:collapse}
+      th{text-align:left;font-size:11px;color:#A1A1AA;text-transform:uppercase;letter-spacing:1px;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.08)}
+      td{padding:8px 10px;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.04)}
+      @media print{body{background:#fff;color:#111}th,td{border-bottom-color:#ddd}th{color:#666}}
+    </style></head><body>
+    <h1>Transactions</h1>
+    <div class="sub">${transactions.length} transactions · Generated ${new Date().toLocaleDateString('en-IN')}</div>
+    <table><thead><tr><th>Date</th><th>Type</th><th>Name</th><th>Amount</th><th>Fund</th><th>Category</th></tr></thead>
+    <tbody>${rows}</tbody></table></body></html>`);
+  printWin.document.close();
+  printWin.focus();
+  setTimeout(() => printWin.print(), 500);
 }
