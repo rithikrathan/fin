@@ -73,62 +73,67 @@ export default function SettingsPage() {
     showToast('Transactions cleared, fund balances preserved');
   };
 
-  const [pctValues, setPctValues] = useState<Record<number, string>>(
-    Object.fromEntries(state.funds.map((f) => [f.id, String(f.allocation_pct)]))
-  );
+  // ── Predictions settings ──
+  const [incomeInput, setIncomeInput] = useState(String(state.settings.expected_monthly_income || ''));
+  const [scaleInput, setScaleInput] = useState(String(state.settings.scale_amount || ''));
 
-  const totalPct = Object.values(pctValues).reduce((s, v) => s + (parseFloat(v) || 0), 0);
-  const pctValid = totalPct === 100;
-
-  const savePercentages = () => {
-    if (!pctValid) return;
-    for (const fund of state.funds) {
-      const val = parseFloat(pctValues[fund.id]);
-      if (isNaN(val)) continue;
-      dispatch({ type: 'UPDATE_FUND', payload: { ...fund, allocation_pct: round2(val) } });
-    }
-    showToast('Allocation saved');
+  const savePredictions = () => {
+    dispatch({
+      type: 'UPDATE_SETTINGS',
+      payload: {
+        expected_monthly_income: round2(parseFloat(incomeInput) || 0),
+        scale_amount: round2(parseFloat(scaleInput) || 0),
+      },
+    });
+    showToast('Prediction settings saved');
   };
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
+      {/* ── Predictions ── */}
       <Card className="p-6">
-        <h3 className="text-xl font-bold text-txt-primary mb-5">Fund Allocation</h3>
+        <h3 className="text-xl font-bold text-txt-primary mb-5">Predictions</h3>
         <p className="text-base text-txt-secondary mb-5">
-          Percentage split for incoming income. Must sum to 100%.
+          Configure values used for milestone predictions and projections across fund detail pages.
         </p>
-        <div className="space-y-4 mb-5">
-          {state.funds.map((f) => (
-            <div key={f.id}>
-              <div className="flex items-center justify-between mb-1.5">
-                <div className="flex items-center gap-2">
-                  <div className="h-3 w-3 rounded-full" style={{ backgroundColor: f.color }} />
-                  <label className="text-sm text-txt-primary">{f.name}</label>
-                </div>
-                <span className="font-mono text-sm text-txt-secondary">{pctValues[f.id] || 0}%</span>
-              </div>
-              <input
-                type="range"
-                min="0"
-                max="100"
-                value={pctValues[f.id] || 0}
-                onChange={(e) => setPctValues((prev) => ({ ...prev, [f.id]: e.target.value }))}
-                className="w-full h-2 rounded-full appearance-none bg-white/[0.06] accent-brand cursor-pointer"
-              />
-            </div>
-          ))}
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm text-txt-primary mb-1">Expected Monthly Income</label>
+            <p className="text-xs text-txt-secondary mb-2">
+              Your recurring salary or base income. Used to predict when milestones can be reached based on allocation %.
+            </p>
+            <input
+              type="number"
+              value={incomeInput}
+              onChange={(e) => setIncomeInput(e.target.value)}
+              placeholder="e.g. 80000"
+              min="0"
+              className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary font-mono placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-txt-primary mb-1">Scale Amount</label>
+            <p className="text-xs text-txt-secondary mb-2">
+              A "what-if" amount per month. Predicts how long milestones take at this investment rate.
+            </p>
+            <input
+              type="number"
+              value={scaleInput}
+              onChange={(e) => setScaleInput(e.target.value)}
+              placeholder="e.g. 5000"
+              min="0"
+              className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary font-mono placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
+            />
+          </div>
         </div>
-        <div className="flex items-center justify-between mb-5">
-          <span className="text-base text-txt-secondary">Total</span>
-          <span className={`font-mono text-base font-semibold ${pctValid ? 'text-gain' : 'text-loss'}`}>
-            {totalPct}%
-          </span>
+        <div className="mt-5">
+          <Button variant="primary" onClick={savePredictions}>
+            Save Prediction Settings
+          </Button>
         </div>
-        <Button variant="primary" onClick={savePercentages} disabled={!pctValid}>
-          Save Allocation
-        </Button>
       </Card>
 
+      {/* ── Data Management ── */}
       <Card className="p-6">
         <h3 className="text-xl font-bold text-txt-primary mb-5">Data Management</h3>
 
@@ -198,6 +203,7 @@ export default function SettingsPage() {
         </div>
       </Card>
 
+      {/* ── About ── */}
       <Card className="p-6">
         <h3 className="text-xl font-bold text-txt-primary mb-3">About</h3>
         <div className="space-y-2 text-base text-txt-secondary">
