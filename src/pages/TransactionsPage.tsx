@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import type { IncomeType, IncomeTransaction, ExpenseTransaction } from '../types';
 import { formatCurrency, formatDate, generateId, round2 } from '../utils/helpers';
@@ -7,6 +7,8 @@ import Button from '../components/shared/Button';
 import Badge from '../components/shared/Badge';
 import Modal from '../components/shared/Modal';
 import EmptyState from '../components/shared/EmptyState';
+import FilePicker from '../components/shared/FilePicker';
+import { getFileUrl } from '../storage/LocalStorageService';
 
 export default function TransactionsPage() {
   const { state, dispatch } = useApp();
@@ -98,6 +100,26 @@ function TransactionRow({
   dispatch: React.Dispatch<import('../types').AppAction>;
 }) {
   const isIncome = tx.type === 'income';
+  const [fileUrl, setFileUrl] = useState<string | null>(null);
+  const hasFile = tx.file_id && tx.file_name;
+  const isImage = hasFile && /\.(jpg|jpeg|png|gif|webp)$/i.test(tx.file_name!);
+
+  useEffect(() => {
+    if (!tx.file_id) return;
+    let revoke: string | null = null;
+    getFileUrl(tx.file_id).then((url) => {
+      if (url) { setFileUrl(url); revoke = url; }
+    });
+    return () => { if (revoke) URL.revokeObjectURL(revoke); };
+  }, [tx.file_id]);
+
+  const downloadFile = async () => {
+    if (!fileUrl || !tx.file_name) return;
+    const a = document.createElement('a');
+    a.href = fileUrl;
+    a.download = tx.file_name;
+    a.click();
+  };
 
   return (
     <Card className="p-4">
@@ -133,6 +155,31 @@ function TransactionRow({
           <div className="text-xs text-txt-secondary mt-0.5">
             {tx.type === 'expense' ? tx.category : tx.type === 'transfer' ? 'Transfer' : tx.category} · {formatDate(tx.date)}
           </div>
+          {tx.type === 'expense' && tx.notes && (
+            <div className="text-xs text-txt-secondary mt-0.5 italic">{tx.notes}</div>
+          )}
+          {tx.type === 'income' && tx.notes && (
+            <div className="text-xs text-txt-secondary mt-0.5 italic">{tx.notes}</div>
+          )}
+          {hasFile && fileUrl && (
+            <div className="mt-2">
+              {isImage ? (
+                <img
+                  src={fileUrl}
+                  alt={tx.file_name!}
+                  className="h-16 rounded-lg border border-border-subtle object-cover cursor-pointer"
+                  onClick={downloadFile}
+                />
+              ) : (
+                <button
+                  onClick={downloadFile}
+                  className="text-xs text-brand hover:underline cursor-pointer"
+                >
+                  📎 {tx.file_name}
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="text-right shrink-0">
@@ -189,6 +236,8 @@ function AddIncomeModal({
   const [incomeType, setIncomeType] = useState<IncomeType>('monthly');
   const [category, setCategory] = useState('');
   const [notes, setNotes] = useState('');
+  const [fileId, setFileId] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -207,6 +256,8 @@ function AddIncomeModal({
       fund_allocation: Object.fromEntries(
         funds.map((f) => [f.id, round2(amt * (f.allocation_pct / 100))])
       ) as Record<number, number>,
+      file_id: fileId,
+      file_name: fileName,
     };
 
     dispatch({ type: 'ADD_TRANSACTION', payload: tx });
@@ -214,6 +265,8 @@ function AddIncomeModal({
     setAmount('');
     setCategory('');
     setNotes('');
+    setFileId(null);
+    setFileName(null);
     onClose();
   };
 
@@ -270,6 +323,15 @@ function AddIncomeModal({
             className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
           />
         </div>
+        <div>
+          <label className="block text-xs text-txt-secondary mb-1">Attachment</label>
+          <FilePicker
+            fileId={fileId}
+            fileName={fileName}
+            onFileUploaded={(id, name) => { setFileId(id); setFileName(name); }}
+            onFileRemoved={() => { setFileId(null); setFileName(null); }}
+          />
+        </div>
 
         {amount && parseFloat(amount) > 0 && (
           <div className="bg-white/[0.03] rounded-lg p-3 text-xs text-txt-secondary space-y-1">
@@ -319,6 +381,9 @@ function AddExpenseModal({
   const [category, setCategory] = useState('');
   const [fundId, setFundId] = useState(funds[0]?.id || 1);
   const [planned, setPlanned] = useState(false);
+  const [notes, setNotes] = useState('');
+  const [fileId, setFileId] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
 
   const selectedFund = funds.find((f) => f.id === fundId);
 
@@ -338,6 +403,9 @@ function AddExpenseModal({
       planned,
       date: new Date().toISOString().split('T')[0],
       is_misc: category === 'Miscellaneous',
+      notes,
+      file_id: fileId,
+      file_name: fileName,
     };
 
     dispatch({ type: 'ADD_TRANSACTION', payload: tx });
@@ -345,6 +413,9 @@ function AddExpenseModal({
     setAmount('');
     setCategory('');
     setPlanned(false);
+    setNotes('');
+    setFileId(null);
+    setFileName(null);
     onClose();
   };
 
@@ -436,6 +507,24 @@ function AddExpenseModal({
               Unplanned
             </button>
           </div>
+        </div>
+        <div>
+          <label className="block text-xs text-txt-secondary mb-1">Notes</label>
+          <input
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Optional"
+            className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-txt-secondary mb-1">Attachment</label>
+          <FilePicker
+            fileId={fileId}
+            fileName={fileName}
+            onFileUploaded={(id, name) => { setFileId(id); setFileName(name); }}
+            onFileRemoved={() => { setFileId(null); setFileName(null); }}
+          />
         </div>
 
         {selectedFund && (
