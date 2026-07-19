@@ -238,6 +238,7 @@ function WantForm({
         predicted_date: null,
         photo_url: photoUrl,
         purchase_link: purchaseLink || null,
+        added_at: new Date().toISOString(),
       },
     });
     setName('');

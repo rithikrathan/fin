@@ -308,6 +308,7 @@ function FundFormModal({
           interest_rate: interestRate ? round2(parseFloat(interestRate)) : null,
           interest_frequency: (interestFrequency || null) as 'daily' | 'weekly' | 'monthly' | 'yearly' | null,
           interest_calc_type: (interestCalcType || null) as 'compound' | 'simple' | null,
+          is_career_fund: false,
         },
       });
       for (const f of otherFunds) {

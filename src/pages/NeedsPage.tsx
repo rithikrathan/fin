@@ -191,6 +191,7 @@ function NeedForm({
         autopay,
         notes,
         active: true,
+        reapproval_required: false,
       },
     });
     setName('');
