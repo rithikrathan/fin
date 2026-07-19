@@ -3,6 +3,7 @@ import type { AppState, AppAction, FundSnapshot } from '../types';
 import { initialState } from './initialState';
 import { round2 } from '../utils/helpers';
 import { loadState, saveState, migrate } from '../storage/LocalStorageService';
+import { removeFile } from '../storage/fileDB';
 
 function snapshotFund(fundId: number, balance: number, snapshots: FundSnapshot[]): FundSnapshot[] {
   const today = new Date().toISOString().split('T')[0];
@@ -87,6 +88,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
         }
       }
 
+      if (tx.file_id) removeFile(tx.file_id);
+
       return {
         ...state,
         funds: newFunds,
@@ -152,6 +155,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
           amount: tr.amount,
           note: `Surplus redistribution: ${fromFund?.name} → ${toFund?.name}`,
           date: today,
+          file_id: null,
+          file_name: null,
         });
       }
 
@@ -237,6 +242,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
         planned: true,
         date: new Date().toISOString().split('T')[0],
         is_misc: false,
+        notes: '',
+        file_id: null,
+        file_name: null,
       };
 
       const newFunds = state.funds.map((f) => {
@@ -282,6 +290,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
         planned: false,
         date: new Date().toISOString().split('T')[0],
         is_misc: true,
+        notes: '',
+        file_id: null,
+        file_name: null,
       };
 
       const reconciledFunds = state.funds.map((f) => {

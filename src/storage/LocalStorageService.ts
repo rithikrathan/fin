@@ -20,7 +20,14 @@ export function loadState(): AppState {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      return { ...initialState, ...parsed, loading: false } as AppState;
+      const state = { ...initialState, ...parsed, loading: false } as AppState;
+      state.transactions = state.transactions.map((tx) => ({
+        ...tx,
+        file_id: tx.file_id ?? null,
+        file_name: tx.file_name ?? null,
+        ...(tx.type === 'expense' && !('notes' in tx) ? { notes: '' } : {}),
+      }));
+      return state;
     }
   } catch {}
   return initialState;

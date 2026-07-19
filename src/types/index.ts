@@ -40,6 +40,8 @@ export interface IncomeTransaction {
   date: string;
   notes: string;
   fund_allocation: Record<number, number>;
+  file_id: string | null;
+  file_name: string | null;
 }
 
 export interface ExpenseTransaction {
@@ -53,6 +55,9 @@ export interface ExpenseTransaction {
   planned: boolean;
   date: string;
   is_misc: boolean;
+  notes: string;
+  file_id: string | null;
+  file_name: string | null;
 }
 
 export interface TransferTransaction {
@@ -63,6 +68,8 @@ export interface TransferTransaction {
   amount: number;
   note: string;
   date: string;
+  file_id: string | null;
+  file_name: string | null;
 }
 
 export type Transaction = IncomeTransaction | ExpenseTransaction | TransferTransaction;

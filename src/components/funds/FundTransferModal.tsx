@@ -35,6 +35,8 @@ export default function FundTransferModal({ open, onClose }: Props) {
         amount: round2(amt),
         note: note || `Transfer: ${fromFund.name} → ${toFund.name}`,
         date: new Date().toISOString().split('T')[0],
+        file_id: null,
+        file_name: null,
       },
     });
 
