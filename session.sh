@@ -12,9 +12,6 @@ tmux send-keys -t "$SESSION:editor" "nvim" C-m
 # shell window
 tmux new-window -t "$SESSION" -n "shell" -c "$TARGET_DIR"
 
-tmux new-window -t "$SESSION" -n "devServer" -c "$TARGET_DIR"
-tmux send-keys -t "$SESSION:devServer" "npm run dev" C-m
- 
 # lazygit window
 tmux new-window -t "$SESSION" -n "lazygit" -c "$TARGET_DIR"
 tmux send-keys -t "$SESSION:lazygit" "lazygit" C-m
@@ -23,5 +20,11 @@ tmux send-keys -t "$SESSION:lazygit" "lazygit" C-m
 tmux new-window -t "$SESSION" -n "superfile" -c "$TARGET_DIR"
 tmux send-keys -t "$SESSION:superfile" "spf" C-m
 
+tmux new-window -t "$SESSION" -n "opencode" -c "$TARGET_DIR"
+tmux send-keys -t "$SESSION:opencode" "opencode" C-m
+
+tmux new-window -t "$SESSION" -n "devServer" -c "$TARGET_DIR"
+tmux send-keys -t "$SESSION:devServer" "npm run dev" C-m
+ 
 tmux select-window -t "$SESSION:editor"
 tmux attach-session -t "$SESSION"
