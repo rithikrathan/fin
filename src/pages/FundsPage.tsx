@@ -6,6 +6,7 @@ import Card from '../components/shared/Card';
 import Button from '../components/shared/Button';
 import Modal from '../components/shared/Modal';
 import SurplusRedistributeModal from '../components/funds/SurplusRedistributeModal';
+import FundTransferModal from '../components/funds/FundTransferModal';
 import {
   PieChart,
   Pie,
@@ -18,6 +19,7 @@ export default function FundsPage() {
   const { state, dispatch } = useApp();
   const navigate = useNavigate();
   const [configOpen, setConfigOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
   const [redistributeOpen, setRedistributeOpen] = useState(false);
   const [redistributeFundId, setRedistributeFundId] = useState<number | null>(null);
 
@@ -280,7 +282,19 @@ export default function FundsPage() {
         </Card>
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex flex-wrap justify-end gap-3">
+        <Button variant="secondary" onClick={() => setTransferOpen(true)}>
+          Transfer
+        </Button>
+        <Button variant="secondary" onClick={() => {
+          if (fundsWithSurplus.length > 0) {
+            openRedistribute(fundsWithSurplus[0].id);
+          } else if (state.funds.length > 1) {
+            openRedistribute(state.funds[0].id);
+          }
+        }}>
+          Redistribute Surplus
+        </Button>
         <Button variant="secondary" onClick={() => setConfigOpen(true)}>
           Configure Allocation
         </Button>
@@ -291,6 +305,11 @@ export default function FundsPage() {
         onClose={() => setConfigOpen(false)}
         funds={state.funds}
         dispatch={dispatch}
+      />
+
+      <FundTransferModal
+        open={transferOpen}
+        onClose={() => setTransferOpen(false)}
       />
 
       {redistributeFundId !== null && (
@@ -325,6 +344,12 @@ function ConfigModal({
 
   const totalPct = Object.values(pctValues).reduce((s, v) => s + (parseFloat(v) || 0), 0);
   const valid = Math.round(totalPct) === 100;
+
+  const allocPieData = funds.map((f) => ({
+    name: f.name.charAt(0).toUpperCase() + f.name.slice(1),
+    value: parseFloat(pctValues[f.id]) || 0,
+    color: f.color,
+  }));
 
   const handleSliderChange = useCallback((fundId: number, newValue: string) => {
     const newVal = Math.min(100, Math.max(0, parseFloat(newValue) || 0));
@@ -375,9 +400,44 @@ function ConfigModal({
 
   return (
     <Modal open={open} onClose={onClose} title="Configure Fund Allocation">
-      <p className="text-base text-txt-secondary mb-6">
+      <p className="text-base text-txt-secondary mb-4">
         Drag one slider — unlocked funds rebalance proportionally. Lock funds to freeze their %. Must sum to 100%.
       </p>
+
+      {totalPct > 0 && (
+        <div className="flex justify-center mb-4">
+          <ResponsiveContainer width="100%" height={160}>
+            <PieChart>
+              <Pie
+                data={allocPieData}
+                cx="50%"
+                cy="50%"
+                innerRadius={45}
+                outerRadius={70}
+                paddingAngle={3}
+                dataKey="value"
+                stroke="none"
+              >
+                {allocPieData.map((entry, i) => (
+                  <Cell key={i} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip
+                formatter={(value) => `${Number(value ?? 0).toFixed(1)}%`}
+                contentStyle={{
+                  background: 'rgba(25,25,25,0.9)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: 12,
+                  color: '#F4F4F5',
+                  fontFamily: 'JetBrains Mono',
+                  fontSize: 13,
+                }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
       <div className="space-y-4">
         {funds.map((f) => {
           const isLocked = !!locked[f.id];
@@ -392,7 +452,18 @@ function ConfigModal({
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-base text-txt-secondary">{parseFloat(pctValues[f.id] || '0').toFixed(1)}%</span>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.1"
+                      value={pctValues[f.id] || '0'}
+                      onChange={(e) => handleSliderChange(f.id, e.target.value)}
+                      className="w-20 bg-white/[0.04] border border-border-subtle rounded-lg px-2 py-1 text-right font-mono text-sm text-txt-primary outline-none focus:border-brand/50 transition-colors"
+                    />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-txt-secondary text-xs pointer-events-none">%</span>
+                  </div>
                   <button
                     onClick={() => toggleLock(f.id)}
                     className={`text-sm cursor-pointer transition-colors ${isLocked ? 'text-brand' : 'text-txt-secondary/40 hover:text-txt-secondary'}`}
