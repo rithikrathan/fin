@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { formatCurrency, formatDate } from '../utils/helpers';
 import Card from '../components/shared/Card';
@@ -11,6 +11,9 @@ import {
   ReferenceLine,
   ComposedChart,
   Area,
+  Bar,
+  BarChart,
+  Line,
   Legend,
 } from 'recharts';
 
@@ -130,6 +133,48 @@ export default function DashboardPage() {
   }, [wantsFund, avgMonthlyIncome, pendingWants]);
 
   const allTargetValues = pendingWants.map((w) => w.target_price);
+
+  const [cashFlowMonths, setCashFlowMonths] = useState(6);
+
+  const avgExpenses = useMemo(() => {
+    const expenseTxs = state.transactions.filter((t) => t.type === 'expense');
+    if (expenseTxs.length === 0) return 0;
+    const dates = expenseTxs.map((t) => new Date(t.date));
+    const earliest = new Date(Math.min(...dates.map((d) => d.getTime())));
+    const months = Math.max(1, (Date.now() - earliest.getTime()) / (30 * 24 * 60 * 60 * 1000));
+    return expenseTxs.reduce((s, t) => (t.type === 'expense' ? s + t.amount : s), 0) / months;
+  }, [state.transactions]);
+
+  const cashFlowData = useMemo(() => {
+    const months: { month: string; income: number; expenses: number }[] = [];
+    const now = new Date();
+    for (let i = cashFlowMonths - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
+      const income = state.transactions
+        .filter((t) => t.type === 'income' && t.date.startsWith(key))
+        .reduce((s, t) => (t.type === 'income' ? s + t.amount : s), 0);
+      const expenses = state.transactions
+        .filter((t) => t.type === 'expense' && t.date.startsWith(key))
+        .reduce((s, t) => (t.type === 'expense' ? s + t.amount : s), 0);
+      months.push({ month: label, income, expenses });
+    }
+    return months;
+  }, [state.transactions, cashFlowMonths]);
+
+  const burnRateData = useMemo(() => {
+    const totalBalance = state.funds.reduce((s, f) => s + f.balance, 0);
+    const points: { month: string; balance: number; idealBurn: number }[] = [];
+    const now = new Date();
+    for (let i = 0; i <= 12; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+      const label = d.toLocaleDateString('en-IN', { month: 'short', year: '2-digit' });
+      const projectedBalance = Math.max(0, totalBalance - avgExpenses * i);
+      points.push({ month: label, balance: projectedBalance, idealBurn: totalBalance });
+    }
+    return points;
+  }, [state.funds, avgExpenses]);
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
@@ -316,6 +361,116 @@ export default function DashboardPage() {
             })}
           </div>
         )}
+      </Card>
+
+      {/* ── Cash Flow Trend ── */}
+      <Card className="p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-xl font-bold text-txt-primary">Cash Flow</h3>
+            <p className="text-sm text-txt-secondary mt-1">Monthly income vs expenses</p>
+          </div>
+          <div className="flex gap-1.5">
+            {[3, 6, 12].map((m) => (
+              <button
+                key={m}
+                onClick={() => setCashFlowMonths(m)}
+                className={`px-3 py-1 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
+                  cashFlowMonths === m
+                    ? 'bg-brand/15 border-brand/30 text-brand'
+                    : 'bg-white/[0.02] border-border-subtle text-txt-secondary hover:text-txt-primary'
+                }`}
+              >
+                {m}m
+              </button>
+            ))}
+          </div>
+        </div>
+        <ResponsiveContainer width="100%" height={280}>
+          <BarChart data={cashFlowData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+            <XAxis dataKey="month" stroke="#A1A1AA" tick={{ fontSize: 12 }} />
+            <YAxis
+              tickFormatter={(v: number) => (v >= 1000 ? `₹${(v / 1000).toFixed(0)}k` : `₹${v}`)}
+              stroke="#A1A1AA"
+              tick={{ fontSize: 12 }}
+              width={60}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Bar dataKey="income" name="Income" fill="#4ADE80" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="expenses" name="Expenses" fill="#FB923C" radius={[4, 4, 0, 0]} />
+            <Legend
+              wrapperStyle={{ fontSize: 13, fontFamily: 'Inter' }}
+              formatter={(value: string) => <span className="text-txt-secondary">{value}</span>}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </Card>
+
+      {/* ── Burn Rate ── */}
+      <Card className="p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-xl font-bold text-txt-primary">Burn Rate</h3>
+            <p className="text-sm text-txt-secondary mt-1">
+              How long your savings last at current spending ({formatCurrency(avgExpenses)}/mo avg)
+            </p>
+          </div>
+          {avgExpenses > 0 && (
+            <div className="text-right">
+              <div className="text-xs text-txt-secondary">Runway</div>
+              <div className={`font-mono text-lg font-bold ${
+                burnRateData.length > 0 && burnRateData[burnRateData.length - 1].balance > 0
+                  ? 'text-gain' : 'text-loss'
+              }`}>
+                {Math.floor(state.funds.reduce((s, f) => s + f.balance, 0) / avgExpenses)}mo
+              </div>
+            </div>
+          )}
+        </div>
+        <ResponsiveContainer width="100%" height={280}>
+          <ComposedChart data={burnRateData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="burnGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#FB923C" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#FB923C" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+            <XAxis dataKey="month" stroke="#A1A1AA" tick={{ fontSize: 12 }} />
+            <YAxis
+              tickFormatter={(v: number) => (v >= 1000 ? `₹${(v / 1000).toFixed(0)}k` : `₹${v}`)}
+              stroke="#A1A1AA"
+              tick={{ fontSize: 12 }}
+              width={60}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <ReferenceLine y={0} stroke="rgba(255,42,42,0.3)" strokeDasharray="6 4" />
+            <Line
+              type="monotone"
+              dataKey="idealBurn"
+              name="Current Balance"
+              stroke="rgba(255,255,255,0.15)"
+              strokeWidth={1.5}
+              strokeDasharray="6 4"
+              dot={false}
+            />
+            <Area
+              type="monotone"
+              dataKey="balance"
+              name="Projected Balance"
+              stroke="#FB923C"
+              strokeWidth={2.5}
+              fill="url(#burnGradient)"
+              dot={false}
+              activeDot={{ r: 5, fill: '#FB923C', stroke: '#050505', strokeWidth: 2 }}
+            />
+            <Legend
+              wrapperStyle={{ fontSize: 13, fontFamily: 'Inter' }}
+              formatter={(value: string) => <span className="text-txt-secondary">{value}</span>}
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
       </Card>
     </div>
   );
