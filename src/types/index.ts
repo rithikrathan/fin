@@ -12,6 +12,7 @@ export interface Fund {
   interest_rate: number | null;
   interest_frequency: 'daily' | 'weekly' | 'monthly' | 'yearly' | null;
   interest_calc_type: 'compound' | 'simple' | null;
+  is_career_fund: boolean;
 }
 
 export interface Milestone {
@@ -80,6 +81,7 @@ export interface Want {
   predicted_date: string | null;
   photo_url: string | null;
   purchase_link: string | null;
+  added_at: string;
 }
 
 export interface Need {
@@ -95,6 +97,7 @@ export interface Need {
   autopay: boolean;
   notes: string;
   active: boolean;
+  reapproval_required: boolean;
 }
 
 export type AssetType = 'stock' | 'mutual_fund' | 'fd' | 'ppf' | 'crypto' | 'other';
@@ -107,6 +110,19 @@ export interface Investment {
   current_value: number;
   purchase_date: string;
   notes: string;
+}
+
+export interface Debt {
+  id: number;
+  name: string;
+  total_principal: number;
+  remaining_balance: number;
+  emi_amount: number;
+  interest_rate: number;
+  due_date: number;
+  linked_fund_id: number;
+  notes: string;
+  active: boolean;
 }
 
 export interface SavedReport {
@@ -137,6 +153,12 @@ export interface Settings {
   locale: string;
   expected_monthly_income: number;
   scale_amount: number;
+  impulse_tax_pct: number;
+  hourly_rate: number;
+  allocation_mode: 'blind' | 'waterfall';
+  baseline_survival_amount: number;
+  mock_salary: number;
+  last_reconciliation: string | null;
 }
 
 export interface AppState {
@@ -147,6 +169,7 @@ export interface AppState {
   wants: Want[];
   needs: Need[];
   investments: Investment[];
+  debts: Debt[];
   reports: SavedReport[];
   settings: Settings;
   loading: boolean;
@@ -173,6 +196,11 @@ export type AppAction =
   | { type: 'ADD_INVESTMENT'; payload: Investment }
   | { type: 'UPDATE_INVESTMENT'; payload: Investment }
   | { type: 'REMOVE_INVESTMENT'; payload: number }
+  | { type: 'ADD_DEBT'; payload: Debt }
+  | { type: 'UPDATE_DEBT'; payload: Debt }
+  | { type: 'REMOVE_DEBT'; payload: number }
+  | { type: 'PAY_DEBT_EMI'; payload: { debt_id: number } }
+  | { type: 'RECONCILE'; payload: { actual_balance: number; app_balance: number; leakage_amount: number } }
   | { type: 'SAVE_REPORT'; payload: SavedReport }
   | { type: 'REMOVE_REPORT'; payload: number }
   | { type: 'UPDATE_SETTINGS'; payload: Partial<Settings> }
