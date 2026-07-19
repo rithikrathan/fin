@@ -12,6 +12,9 @@ tmux send-keys -t "$SESSION:editor" "nvim" C-m
 # shell window
 tmux new-window -t "$SESSION" -n "shell" -c "$TARGET_DIR"
 
+tmux new-window -t "$SESSION" -n "devServer" -c "$TARGET_DIR"
+tmux send-keys -t "$SESSION:devServer" "npm run dev" C-m
+ 
 # lazygit window
 tmux new-window -t "$SESSION" -n "lazygit" -c "$TARGET_DIR"
 tmux send-keys -t "$SESSION:lazygit" "lazygit" C-m
