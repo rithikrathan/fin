@@ -222,6 +222,111 @@ function appReducer(state: AppState, action: AppAction): AppState {
         investments: state.investments.filter((i) => i.id !== action.payload),
       };
 
+    case 'ADD_DEBT':
+      return { ...state, debts: [...state.debts, action.payload] };
+
+    case 'UPDATE_DEBT':
+      return {
+        ...state,
+        debts: state.debts.map((d) => (d.id === action.payload.id ? action.payload : d)),
+      };
+
+    case 'REMOVE_DEBT':
+      return {
+        ...state,
+        debts: state.debts.filter((d) => d.id !== action.payload),
+      };
+
+    case 'PAY_DEBT_EMI': {
+      const debt = state.debts.find((d) => d.id === action.payload.debt_id);
+      if (!debt) return state;
+
+      const principalPaid = round2(debt.emi_amount - (debt.remaining_balance * (debt.interest_rate / 100 / 12)));
+      const actualPrincipal = Math.min(principalPaid, debt.remaining_balance);
+      const newRemaining = round2(debt.remaining_balance - actualPrincipal);
+
+      const expenseTx: import('../types').ExpenseTransaction = {
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        type: 'expense',
+        description: `EMI — ${debt.name}`,
+        amount: debt.emi_amount,
+        category: 'Debt EMI',
+        fund_id: debt.linked_fund_id,
+        fund_name: state.funds.find((f) => f.id === debt.linked_fund_id)?.name || 'needs',
+        planned: true,
+        date: new Date().toISOString().split('T')[0],
+        is_misc: false,
+      };
+
+      const newFunds = state.funds.map((f) => {
+        if (f.id === debt.linked_fund_id) return { ...f, balance: round2(f.balance - debt.emi_amount) };
+        return f;
+      });
+
+      const newDebts = state.debts.map((d) => {
+        if (d.id !== debt.id) return d;
+        return { ...d, remaining_balance: newRemaining, active: newRemaining > 0 };
+      });
+
+      let newSnapshots = [...state.fund_snapshots];
+      for (const f of newFunds) {
+        const old = state.funds.find((of) => of.id === f.id);
+        if (old && old.balance !== f.balance) {
+          newSnapshots = snapshotFund(f.id, f.balance, newSnapshots);
+        }
+      }
+
+      return {
+        ...state,
+        funds: newFunds,
+        debts: newDebts,
+        fund_snapshots: newSnapshots,
+        transactions: [expenseTx, ...state.transactions],
+      };
+    }
+
+    case 'RECONCILE': {
+      const { actual_balance, app_balance, leakage_amount } = action.payload;
+      if (leakage_amount <= 0) return { ...state, settings: { ...state.settings, last_reconciliation: new Date().toISOString().split('T')[0] } };
+
+      const needsFund = state.funds.find((f) => f.name === 'needs');
+      const leakageTx: import('../types').ExpenseTransaction = {
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        type: 'expense',
+        description: `Reconciliation adjustment — ₹${leakage_amount} unaccounted leakage`,
+        amount: leakage_amount,
+        category: 'Miscellaneous',
+        fund_id: needsFund?.id || state.funds[0].id,
+        fund_name: needsFund?.name || state.funds[0].name,
+        planned: false,
+        date: new Date().toISOString().split('T')[0],
+        is_misc: true,
+      };
+
+      const reconciledFunds = state.funds.map((f) => {
+        if (f.id === (needsFund?.id || state.funds[0].id)) {
+          return { ...f, balance: round2(f.balance - leakage_amount) };
+        }
+        return f;
+      });
+
+      let reconciledSnapshots = [...state.fund_snapshots];
+      for (const f of reconciledFunds) {
+        const old = state.funds.find((of) => of.id === f.id);
+        if (old && old.balance !== f.balance) {
+          reconciledSnapshots = snapshotFund(f.id, f.balance, reconciledSnapshots);
+        }
+      }
+
+      return {
+        ...state,
+        funds: reconciledFunds,
+        fund_snapshots: reconciledSnapshots,
+        transactions: [leakageTx, ...state.transactions],
+        settings: { ...state.settings, last_reconciliation: new Date().toISOString().split('T')[0] },
+      };
+    }
+
     case 'SAVE_REPORT':
       return { ...state, reports: [action.payload, ...state.reports] };
     case 'REMOVE_REPORT':
