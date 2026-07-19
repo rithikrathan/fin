@@ -2,26 +2,7 @@ import { createContext, useContext, useReducer, useEffect, type ReactNode } from
 import type { AppState, AppAction, FundSnapshot } from '../types';
 import { initialState } from './initialState';
 import { round2 } from '../utils/helpers';
-
-const STORAGE_KEY = 'finmanager_data';
-
-function loadState(): AppState {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as AppState;
-      return { ...initialState, ...parsed, loading: false };
-    }
-  } catch {}
-  return initialState;
-}
-
-function saveState(state: AppState) {
-  try {
-    const { loading, ...rest } = state;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(rest));
-  } catch {}
-}
+import { loadState, saveState, migrate } from '../storage/LocalStorageService';
 
 function snapshotFund(fundId: number, balance: number, snapshots: FundSnapshot[]): FundSnapshot[] {
   const today = new Date().toISOString().split('T')[0];
@@ -286,7 +267,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
     }
 
     case 'RECONCILE': {
-      const { actual_balance, app_balance, leakage_amount } = action.payload;
+      const { actual_balance: _actual, app_balance: _app, leakage_amount } = action.payload;
       if (leakage_amount <= 0) return { ...state, settings: { ...state.settings, last_reconciliation: new Date().toISOString().split('T')[0] } };
 
       const needsFund = state.funds.find((f) => f.name === 'needs');
@@ -355,6 +336,10 @@ const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState, loadState);
+
+  useEffect(() => {
+    migrate();
+  }, []);
 
   useEffect(() => {
     saveState(state);

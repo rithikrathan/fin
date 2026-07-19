@@ -1,5 +1,7 @@
 import { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
+import { exportZip, importZip } from '../storage/LocalStorageService';
+import { saveAs } from 'file-saver';
 import type { AppState } from '../types';
 import { round2 } from '../utils/helpers';
 import Card from '../components/shared/Card';
@@ -18,15 +20,10 @@ export default function SettingsPage() {
     setTimeout(() => setToast(''), 3000);
   };
 
-  const exportData = () => {
+  const exportData = async () => {
     const { loading, ...data } = state;
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `finmanager-backup-${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const blob = await exportZip(data);
+    saveAs(blob, `finmanager-backup-${new Date().toISOString().split('T')[0]}.zip`);
     showToast('Data exported');
   };
 
@@ -44,20 +41,16 @@ export default function SettingsPage() {
     }
   };
 
-  const importData = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const importData = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const data = JSON.parse(ev.target?.result as string) as AppState;
-        dispatch({ type: 'LOAD_DATA', payload: data });
-        showToast('Data imported successfully');
-      } catch {
-        showToast('Invalid file format');
-      }
-    };
-    reader.readAsText(file);
+    try {
+      const data = await importZip(file);
+      dispatch({ type: 'LOAD_DATA', payload: data as AppState });
+      showToast('Data imported successfully');
+    } catch {
+      showToast('Invalid file format');
+    }
     e.target.value = '';
   };
 
@@ -167,7 +160,7 @@ export default function SettingsPage() {
               <input
                 ref={fileRef}
                 type="file"
-                accept=".json"
+                accept=".zip"
                 onChange={importData}
                 className="hidden"
               />
