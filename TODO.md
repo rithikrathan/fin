@@ -57,13 +57,19 @@ App runs on web, Android (Tauri primary, Capacitor fallback), and Linux (Tauri).
 - Tauri has plugins for: Filesystem, Notifications, Clipboard, Biometrics, etc.
 
 **Storage architecture: Abstraction layer**
-- `StorageService` interface with platform-specific implementations:
-  - Web: localStorage for core data, IndexedDB for files
-  - Tauri (Android/Linux): Tauri Filesystem API for both data + files
-  - Capacitor (fallback): Capacitor Filesystem API
+
+`StorageService` interface with platform-specific implementations:
+
+| Platform | Core Data | File Attachments | Persistence |
+|----------|-----------|-----------------|-------------|
+| **Web** | localStorage (~5MB) | IndexedDB | WebView cache — volatile on Android |
+| **Tauri (Android/Linux)** | SQLite via `tauri-plugin-sql` | Filesystem API | App data dir — survives cache clears |
+| **Capacitor (fallback)** | localStorage | Filesystem API | App documents dir |
+
+**Critical:** localStorage/IndexedDB are stored in WebView cache on Android. Android can clear them during low storage, cache cleanup, or app updates. **Tauri SQLite is required for reliable Android storage.**
 
 **Core data (funds, transactions, needs, wants, debts):**
-- Web: localStorage (~5MB limit)
+- Web: localStorage (~5MB limit) — fine for web dev/personal use
 - Tauri: SQLite via tauri-plugin-sql (unlimited, structured)
 - Abstraction layer handles read/write/migration transparently
 
@@ -200,15 +206,34 @@ Layout: **Tabbed** — Overview | Alerts | Charts | Predictions
 ## Still TODO
 
 ### Phase 0: Platform & Storage Foundation
-- [ ] Set up Tauri 2.0 project (Android + Linux targets)
-- [ ] Create StorageService abstraction layer interface
-- [ ] Implement web storage (localStorage + IndexedDB for files)
-- [ ] Implement Tauri storage (SQLite + Filesystem API)
-- [ ] Implement Capacitor fallback storage
-- [ ] Build auto-migration from localStorage to new backend
-- [ ] Build zip export/import (data.json + files/ + meta.json)
-- [ ] Image compression utility (resize + JPEG quality reduction, 5MB limit)
-- [ ] Set up Tauri Local Notifications plugin
+
+**Done:**
+- [x] StorageService abstraction layer interface
+- [x] Web storage: localStorage (core) + IndexedDB (files) via `idb` lib
+- [x] Zip export/import (data.json + files/ + meta.json) via `jszip`
+- [x] Image compression utility (`browser-image-compression`)
+- [x] Auto-migration placeholder (detects old format, sets flag)
+- [x] AppContext wired to storage module
+- [x] SettingsPage: export/import switched to zip format
+
+**Remaining:**
+- [ ] Set up Tauri 2.0 project (Android + Linux targets) — **critical for Android data persistence**
+- [ ] Tauri SQLite backend (`tauri-plugin-sql`) — replaces localStorage on Android
+- [ ] Tauri Filesystem API for file attachments on Android/Linux
+- [ ] Capacitor fallback storage (filesystem API) — lower priority
+- [ ] Tauri Local Notifications plugin — for EMI reminders, lock expiry, re-approval
+- [ ] Full auto-migration: detect old localStorage → prompt user → migrate to SQLite on Tauri
+
+### Phase 0b: Transaction Enrichment (UI)
+
+Storage layer is ready — need to wire it into the UI:
+
+- [ ] Add `notes: string | null` and `file_id: string | null` + `file_name: string | null` to all Transaction types
+- [ ] Create `FilePicker` component — upload image/PDF, compress, store in IndexedDB/filesystem
+- [ ] Wire file picker into Add Income / Add Expense modals in TransactionsPage
+- [ ] Show attached file thumbnail/icon on transaction cards
+- [ ] Create `FileViewer` modal — preview attached image/PDF
+- [ ] Update seed data with sample notes
 
 ### Phase 1: Income Hours Tracking
 - [ ] Add `hours_worked: number | null` to `IncomeTransaction` type
