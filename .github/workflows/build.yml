@@ -120,22 +120,17 @@ jobs:
       - name: Build Frontend
         run: npx vite build
 
+      - name: Install ImageMagick
+        run: sudo apt-get install -y imagemagick
+
       - name: Init Tauri Android
         run: npx tauri android init
 
       - name: Set app name and icons
         run: |
           ANDROID_RES="src-tauri/gen/android/app/src/main/res"
-          
-          # App name
           mkdir -p "$ANDROID_RES/values"
-          cat > "$ANDROID_RES/values/strings.xml" << 'EOF'
-          <resources>
-              <string name="app_name">Fin</string>
-          </resources>
-          EOF
-          
-          # Generate Android icons from icon.png
+          echo '<resources><string name="app_name">Fin</string></resources>' > "$ANDROID_RES/values/strings.xml"
           for size_dir in "mdpi:48" "hdpi:72" "xhdpi:96" "xxhdpi:144" "xxxhdpi:192"; do
             dir="${size_dir%%:*}"
             px="${size_dir##*:}"
