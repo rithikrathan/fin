@@ -133,9 +133,23 @@ jobs:
         run: npx tauri icon src-tauri/icons/icon.png
 
       - name: Build APK
-        run: npx tauri android build --target aarch64 --debug --apk --ci --verbose
+        id: android-build
+        run: npx tauri android build --target aarch64 --debug --apk --ci
+        continue-on-error: true
         env:
           NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
+
+      - name: Show Gradle error if build failed
+        if: steps.android-build.outcome == 'failure'
+        run: |
+          chmod +x src-tauri/gen/android/gradlew
+          src-tauri/gen/android/gradlew --project-dir src-tauri/gen/android assembleDebug --stacktrace 2>&1 | grep -A 30 "What went wrong" || tail -100
+        env:
+          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
+
+      - name: Fail if build failed
+        if: steps.android-build.outcome == 'failure'
+        run: exit 1
 
       - name: Upload Android Artifact
         uses: actions/upload-artifact@v4
