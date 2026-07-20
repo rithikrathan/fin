@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { storeFile } from '../../storage/fileDB';
+import { getStorageService } from '../../storage/StorageService';
 import { compressImage, isAcceptedFile } from '../../utils/imageCompression';
 import { generateId } from '../../utils/helpers';
 
@@ -22,7 +22,8 @@ export default function FilePicker({ onFileUploaded, onFileRemoved, fileId, file
     try {
       const blob = file.type.startsWith('image/') ? await compressImage(file) : file;
       const id = String(generateId());
-      await storeFile(id, blob);
+      const svc = await getStorageService();
+      await svc.storeFile(id, blob);
       onFileUploaded(id, file.name);
     } catch (err) {
       // [debug] console.error('File upload failed:', err);

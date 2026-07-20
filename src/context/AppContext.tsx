@@ -1,9 +1,8 @@
-import { createContext, useContext, useReducer, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useReducer, useEffect, useState, type ReactNode } from 'react';
 import type { AppState, AppAction, FundSnapshot } from '../types';
 import { initialState } from './initialState';
 import { round2 } from '../utils/helpers';
-import { loadState, saveState, migrate } from '../storage/LocalStorageService';
-import { removeFile } from '../storage/fileDB';
+import { getStorageService } from '../storage/StorageService';
 
 function snapshotFund(fundId: number, balance: number, snapshots: FundSnapshot[]): FundSnapshot[] {
   const today = new Date().toISOString().split('T')[0];
@@ -88,7 +87,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
         }
       }
 
-      if (tx.file_id) removeFile(tx.file_id);
+      if (tx.file_id) {
+        getStorageService().then((svc) => svc.removeFile(tx.file_id!)).catch(console.error);
+      }
 
       return {
         ...state,
@@ -346,14 +347,41 @@ interface AppContextType {
 const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(appReducer, initialState, loadState);
+  const [state, dispatch] = useReducer(appReducer, { ...initialState, loading: true });
 
   useEffect(() => {
-    migrate();
+    let cancelled = false;
+    (async () => {
+      try {
+        const svc = await getStorageService();
+        await svc.migrate();
+        const loaded = await svc.loadState();
+        if (!cancelled) {
+          dispatch({ type: 'LOAD_DATA', payload: { ...loaded, loading: false } });
+        }
+      } catch (e) {
+        console.error('Storage load failed:', e);
+        if (!cancelled) {
+          dispatch({ type: 'LOAD_DATA', payload: { ...initialState, loading: false } });
+        }
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
-    saveState(state);
+    if (state.loading) return;
+    let timer: ReturnType<typeof setTimeout>;
+    timer = setTimeout(async () => {
+      try {
+        const svc = await getStorageService();
+        const { loading: _, ...saveable } = state;
+        await svc.saveState(saveable);
+      } catch (e) {
+        console.error('Storage save failed:', e);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
   }, [state]);
 
   return <AppContext.Provider value={{ state, dispatch }}>{children}</AppContext.Provider>;

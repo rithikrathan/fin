@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useApp } from '../context/AppContext';
-import { exportZip, importZip } from '../storage/LocalStorageService';
+import { getStorageService } from '../storage/StorageService';
 import { saveAs } from 'file-saver';
 import type { AppState } from '../types';
 import { round2 } from '../utils/helpers';
@@ -22,7 +22,8 @@ export default function SettingsPage() {
 
     const exportData = async () => {
         const { loading, ...data } = state;
-        const blob = await exportZip(data);
+        const svc = await getStorageService();
+        const blob = await svc.exportZip(data);
         saveAs(blob, `finmanager-backup-${new Date().toISOString().split('T')[0]}.zip`);
         showToast('Data exported');
     };
@@ -45,7 +46,8 @@ export default function SettingsPage() {
         const file = e.target.files?.[0];
         if (!file) return;
         try {
-            const data = await importZip(file);
+            const svc = await getStorageService();
+            const data = await svc.importZip(file);
             dispatch({ type: 'LOAD_DATA', payload: data as AppState });
             showToast('Data imported successfully');
         } catch {

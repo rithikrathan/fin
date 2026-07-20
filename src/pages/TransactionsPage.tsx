@@ -8,7 +8,7 @@ import Badge from '../components/shared/Badge';
 import Modal from '../components/shared/Modal';
 import EmptyState from '../components/shared/EmptyState';
 import FilePicker from '../components/shared/FilePicker';
-import { getFileUrl } from '../storage/LocalStorageService';
+import { getStorageService } from '../storage/StorageService';
 
 export default function TransactionsPage() {
   const { state, dispatch } = useApp();
@@ -107,8 +107,8 @@ function TransactionRow({
   useEffect(() => {
     if (!tx.file_id) return;
     let revoke: string | null = null;
-    getFileUrl(tx.file_id).then((url) => {
-      if (url) { setFileUrl(url); revoke = url; }
+    getStorageService().then((svc) => svc.getFile(tx.file_id!)).then((blob) => {
+      if (blob) { const url = URL.createObjectURL(blob); setFileUrl(url); revoke = url; }
     });
     return () => { if (revoke) URL.revokeObjectURL(revoke); };
   }, [tx.file_id]);
