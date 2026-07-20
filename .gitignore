@@ -53,3 +53,10 @@ node_modules/
 *.config.local
 /private/
 
+# Tauri
+src-tauri/target/
+src-tauri/WixTools/
+src-tauri/Frameworks/
+src-tauri/**/*.msi
+src-tauri/**/*.exe
+
