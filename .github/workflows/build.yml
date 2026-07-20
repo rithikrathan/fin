@@ -9,7 +9,77 @@ permissions:
   contents: write
 
 jobs:
-  # ACTIVE: Android compilation job
+  # Linux desktop build
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libappindicator3-dev librsvg2-dev patchelf libssl-dev
+          
+      - name: Install frontend dependencies
+        run: npm ci
+        
+      - name: Build
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: --bundles deb
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Fin ${{ github.ref_name }}'
+          releaseBody: 'Automated release for version ${{ github.ref_name }}'
+          releaseDraft: true 
+
+  # Windows desktop build
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          
+      - name: Install frontend dependencies
+        run: npm ci
+        
+      - name: Build
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: 'Fin ${{ github.ref_name }}'
+          releaseBody: 'Automated release for version ${{ github.ref_name }}'
+          releaseDraft: true
+
+  # Android mobile compilation job
   android:
     runs-on: ubuntu-latest
     steps:
@@ -59,19 +129,54 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          # FIXED PATH: Added double-asterisk to scan subdirectories (universal/release, arm64/release, etc.)
-          path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          path: |
+            src-tauri/gen/android/app/build/outputs/apk/universalRelease/*.apk
+            src-tauri/gen/android/app/build/outputs/apk/*Release/*.apk
+            src-tauri/gen/android/app/build/outputs/apk/**/*.apk
           if-no-files-found: error
 
-  # ACTIVE: Only waits for android, skips downloading web artifacts
+  # Web standalone build
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          
+      - name: Install frontend dependencies
+        run: npm ci
+        
+      - name: Build
+        run: npx vite build
+        
+      - name: Zip dist
+        run: cd dist && zip -r ../web-dist.zip .
+        
+      - name: Upload Web Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: web-dist.zip
+          if-no-files-found: error
+
+  # Release publisher orchestrator
   publish-extra-assets:
     runs-on: ubuntu-latest
-    needs: [android]
+    needs: [linux, windows, android, web]
     steps:
       - name: Download Android Artifact
         uses: actions/download-artifact@v4
         with:
           name: android-apk
+          path: ./artifacts
+
+      - name: Download Web Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: web-dist
           path: ./artifacts
 
       - name: Upload Extra Assets to Release
