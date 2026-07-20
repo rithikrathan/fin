@@ -130,3 +130,46 @@ CREATE TABLE IF NOT EXISTS files (
   id TEXT PRIMARY KEY,
   data BLOB NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS message_patterns (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  source_app TEXT,
+  example_sms TEXT NOT NULL DEFAULT '',
+  field_selectors TEXT NOT NULL DEFAULT '[]',
+  full_regex TEXT NOT NULL DEFAULT '',
+  message_type TEXT NOT NULL DEFAULT 'transaction',
+  enabled INTEGER NOT NULL DEFAULT 1,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS sms_logs (
+  id TEXT PRIMARY KEY,
+  message_text TEXT NOT NULL,
+  message_source TEXT,
+  timestamp TEXT NOT NULL,
+  pattern_id TEXT,
+  matched INTEGER NOT NULL DEFAULT 0,
+  parsed_fields TEXT NOT NULL DEFAULT '{}',
+  transaction_id INTEGER,
+  dismissed INTEGER NOT NULL DEFAULT 0,
+  notification_id TEXT
+);
+
+CREATE TABLE IF NOT EXISTS detected_transactions (
+  id TEXT PRIMARY KEY,
+  sms_log_id TEXT NOT NULL,
+  amount REAL NOT NULL,
+  tx_type TEXT NOT NULL,
+  account_number TEXT,
+  bank_name TEXT,
+  merchant TEXT,
+  date TEXT NOT NULL,
+  balance_after REAL,
+  fund_id INTEGER,
+  category TEXT,
+  notes TEXT DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'detected',
+  created_transaction_id INTEGER
+);

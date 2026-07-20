@@ -247,6 +247,10 @@ export const initialState: AppState = {
     },
   ],
 
+  message_patterns: [],
+  sms_logs: [],
+  detected_transactions: [],
+
   settings: {
     currency: '₹',
     locale: 'en-IN',

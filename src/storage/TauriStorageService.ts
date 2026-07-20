@@ -1,5 +1,5 @@
 import Database from '@tauri-apps/plugin-sql';
-import type { Fund, Milestone, FundSnapshot, Transaction, Want, Need, Investment, Debt, SavedReport, Settings, IncomeTransaction, ExpenseTransaction } from '../types/index.ts';
+import type { Fund, Milestone, FundSnapshot, Transaction, Want, Need, Investment, Debt, SavedReport, Settings, IncomeTransaction, ExpenseTransaction, MessagePattern, SmsLog, DetectedTransaction } from '../types/index.ts';
 import { initialState } from '../context/initialState.ts';
 import type { StorageService, StorageState } from './StorageService.ts';
 import schemaSql from './schema.sql?raw';
@@ -202,6 +202,55 @@ function parseReport(r: Record<string, unknown>): SavedReport {
   };
 }
 
+function parseMessagePattern(r: Record<string, unknown>): MessagePattern {
+  return {
+    id: String(r.id),
+    name: String(r.name),
+    source_app: rowToOptionalString(r.source_app),
+    example_sms: String(r.example_sms || ''),
+    field_selectors: JSON.parse(String(r.field_selectors || '[]')),
+    full_regex: String(r.full_regex || ''),
+    message_type: String(r.message_type || 'transaction') as MessagePattern['message_type'],
+    enabled: rowToBool(r.enabled),
+    created_at: String(r.created_at),
+    updated_at: String(r.updated_at),
+  };
+}
+
+function parseSmsLog(r: Record<string, unknown>): SmsLog {
+  return {
+    id: String(r.id),
+    message_text: String(r.message_text),
+    message_source: rowToOptionalString(r.message_source),
+    timestamp: String(r.timestamp),
+    pattern_id: rowToOptionalString(r.pattern_id),
+    matched: rowToBool(r.matched),
+    parsed_fields: JSON.parse(String(r.parsed_fields || '{}')),
+    transaction_id: r.transaction_id != null ? rowToNumber(r.transaction_id) : null,
+    dismissed: rowToBool(r.dismissed),
+    notification_id: rowToOptionalString(r.notification_id),
+  };
+}
+
+function parseDetectedTx(r: Record<string, unknown>): DetectedTransaction {
+  return {
+    id: String(r.id),
+    sms_log_id: String(r.sms_log_id),
+    amount: rowToNumber(r.amount),
+    type: String(r.tx_type) as DetectedTransaction['type'],
+    account_number: rowToOptionalString(r.account_number),
+    bank_name: rowToOptionalString(r.bank_name),
+    merchant: rowToOptionalString(r.merchant),
+    date: String(r.date),
+    balance_after: r.balance_after != null ? rowToNumber(r.balance_after) : null,
+    fund_id: r.fund_id != null ? rowToNumber(r.fund_id) : null,
+    category: rowToOptionalString(r.category),
+    notes: String(r.notes || ''),
+    status: String(r.status || 'detected') as DetectedTransaction['status'],
+    created_transaction_id: r.created_transaction_id != null ? rowToNumber(r.created_transaction_id) : null,
+  };
+}
+
 export class TauriStorageService implements StorageService {
   private initialized = false;
 
@@ -215,7 +264,7 @@ export class TauriStorageService implements StorageService {
     await this.init();
     const d = await getDb();
 
-    const [fundRows, snapshotRows, milestoneRows, txRows, wantRows, needRows, invRows, debtRows, settingRows, reportRows] = await Promise.all([
+    const [fundRows, snapshotRows, milestoneRows, txRows, wantRows, needRows, invRows, debtRows, settingRows, reportRows, patternRows, smsRows, detRows] = await Promise.all([
       d.select<Fund[]>('SELECT * FROM funds'),
       d.select<FundSnapshot[]>('SELECT * FROM fund_snapshots'),
       d.select<Milestone[]>('SELECT * FROM milestones'),
@@ -226,6 +275,9 @@ export class TauriStorageService implements StorageService {
       d.select<Debt[]>('SELECT * FROM debts'),
       d.select<{ key: string; value: string }[]>('SELECT * FROM settings'),
       d.select<SavedReport[]>('SELECT * FROM reports'),
+      d.select<Record<string, unknown>[]>('SELECT * FROM message_patterns'),
+      d.select<Record<string, unknown>[]>('SELECT * FROM sms_logs'),
+      d.select<Record<string, unknown>[]>('SELECT * FROM detected_transactions'),
     ]);
 
     const settings: Settings = { ...initialState.settings };
@@ -248,6 +300,9 @@ export class TauriStorageService implements StorageService {
       debts: (debtRows as unknown as Record<string, unknown>[]).map(parseDebt),
       reports: (reportRows as unknown as Record<string, unknown>[]).map(parseReport),
       settings,
+      message_patterns: patternRows.map(parseMessagePattern),
+      sms_logs: smsRows.map(parseSmsLog),
+      detected_transactions: detRows.map(parseDetectedTx),
     };
 
     if (state.funds.length === 0) return initialState;
@@ -347,6 +402,30 @@ export class TauriStorageService implements StorageService {
       await d.execute(
         'INSERT INTO reports (id, name, period_start, period_end, generated_at, data) VALUES ($1,$2,$3,$4,$5,$6)',
         [r.id, r.name, r.period_start, r.period_end, r.generated_at, JSON.stringify(r.data)]
+      );
+    }
+
+    await d.execute('DELETE FROM message_patterns');
+    for (const p of state.message_patterns) {
+      await d.execute(
+        'INSERT INTO message_patterns (id, name, source_app, example_sms, field_selectors, full_regex, message_type, enabled, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
+        [p.id, p.name, p.source_app, p.example_sms, JSON.stringify(p.field_selectors), p.full_regex, p.message_type, p.enabled ? 1 : 0, p.created_at, p.updated_at]
+      );
+    }
+
+    await d.execute('DELETE FROM sms_logs');
+    for (const s of state.sms_logs) {
+      await d.execute(
+        'INSERT INTO sms_logs (id, message_text, message_source, timestamp, pattern_id, matched, parsed_fields, transaction_id, dismissed, notification_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
+        [s.id, s.message_text, s.message_source, s.timestamp, s.pattern_id, s.matched ? 1 : 0, JSON.stringify(s.parsed_fields), s.transaction_id, s.dismissed ? 1 : 0, s.notification_id]
+      );
+    }
+
+    await d.execute('DELETE FROM detected_transactions');
+    for (const t of state.detected_transactions) {
+      await d.execute(
+        'INSERT INTO detected_transactions (id, sms_log_id, amount, tx_type, account_number, bank_name, merchant, date, balance_after, fund_id, category, notes, status, created_transaction_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)',
+        [t.id, t.sms_log_id, t.amount, t.type, t.account_number, t.bank_name, t.merchant, t.date, t.balance_after, t.fund_id, t.category, t.notes, t.status, t.created_transaction_id]
       );
     }
   }

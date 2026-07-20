@@ -171,6 +171,61 @@ export interface Settings {
   waterfall_priority: number[];
 }
 
+export interface FieldSelector {
+  field_name: string;
+  field_label: string;
+  highlight_color: string;
+  selected_text: string;
+  value_map: Record<string, string>;
+  regex_group: number;
+  is_static: boolean;
+  static_value: string | null;
+  required: boolean;
+}
+
+export interface MessagePattern {
+  id: string;
+  name: string;
+  source_app: string | null;
+  example_sms: string;
+  field_selectors: FieldSelector[];
+  full_regex: string;
+  message_type: 'transaction' | 'otp' | 'subscription' | 'balance' | 'custom';
+  enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SmsLog {
+  id: string;
+  message_text: string;
+  message_source: string | null;
+  timestamp: string;
+  pattern_id: string | null;
+  matched: boolean;
+  parsed_fields: Record<string, string>;
+  transaction_id: number | null;
+  dismissed: boolean;
+  notification_id: string | null;
+}
+
+export interface DetectedTransaction {
+  id: string;
+  sms_log_id: string;
+  amount: number;
+  type: 'credit' | 'debit';
+  account_number: string | null;
+  bank_name: string | null;
+  merchant: string | null;
+  date: string;
+  balance_after: number | null;
+  fund_id: number | null;
+  category: string | null;
+  notes: string;
+  status: 'detected' | 'created' | 'dismissed';
+  created_transaction_id: number | null;
+}
+
 export interface AppState {
   funds: Fund[];
   milestones: Milestone[];
@@ -182,6 +237,9 @@ export interface AppState {
   debts: Debt[];
   reports: SavedReport[];
   settings: Settings;
+  message_patterns: MessagePattern[];
+  sms_logs: SmsLog[];
+  detected_transactions: DetectedTransaction[];
   loading: boolean;
 }
 
@@ -214,6 +272,14 @@ export type AppAction =
   | { type: 'SAVE_REPORT'; payload: SavedReport }
   | { type: 'REMOVE_REPORT'; payload: number }
   | { type: 'UPDATE_SETTINGS'; payload: Partial<Settings> }
+  | { type: 'ADD_PATTERN'; payload: MessagePattern }
+  | { type: 'UPDATE_PATTERN'; payload: MessagePattern }
+  | { type: 'REMOVE_PATTERN'; payload: string }
+  | { type: 'ADD_SMS_LOG'; payload: SmsLog }
+  | { type: 'UPDATE_SMS_LOG'; payload: SmsLog }
+  | { type: 'ADD_DETECTED_TX'; payload: DetectedTransaction }
+  | { type: 'UPDATE_DETECTED_TX'; payload: DetectedTransaction }
+  | { type: 'REMOVE_DETECTED_TX'; payload: string }
   | { type: 'LOAD_DATA'; payload: AppState }
   | { type: 'DELETE_ALL' }
   | { type: 'SET_LOADING'; payload: boolean };

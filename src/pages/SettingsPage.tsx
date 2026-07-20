@@ -7,6 +7,7 @@ import { round2 } from '../utils/helpers';
 import Card from '../components/shared/Card';
 import Button from '../components/shared/Button';
 import Modal from '../components/shared/Modal';
+import PatternBuilder from '../components/messages/PatternBuilder';
 
 export default function SettingsPage() {
     const { state, dispatch } = useApp();
@@ -126,6 +127,15 @@ export default function SettingsPage() {
                         Save Prediction Settings
                     </Button>
                 </div>
+            </Card>
+
+            {/* ── SMS Patterns ── */}
+            <Card className="p-6">
+                <h3 className="text-xl font-bold text-txt-primary mb-2">SMS Patterns</h3>
+                <p className="text-sm text-txt-secondary mb-4">
+                    Create regex patterns to match bank SMS and auto-detect transactions.
+                </p>
+                <PatternBuilder />
             </Card>
 
             {/* ── Data Management ── */}

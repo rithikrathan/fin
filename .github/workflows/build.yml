@@ -121,7 +121,7 @@ jobs:
         run: npx vite build
 
       - name: Init Tauri Android
-        run: echo "y" | npx tauri android init
+        run: npx tauri android init --ci --skip-targets-install
 
       - name: Set app name
         run: |
@@ -133,7 +133,7 @@ jobs:
         run: npx tauri icon src-tauri/icons/icon.png
 
       - name: Build APK
-        run: npx tauri android build --apk
+        run: npx tauri android build --target aarch64 --debug --apk --ci --verbose
         env:
           NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
 

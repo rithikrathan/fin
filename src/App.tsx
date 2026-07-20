@@ -13,6 +13,8 @@ import WantsPage from './pages/WantsPage';
 import InvestmentsPage from './pages/InvestmentsPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
+import MessagesPage from './pages/MessagesPage';
+import DetectTransactionPage from './pages/DetectTransactionPage';
 
 export default function App() {
   return (
@@ -34,6 +36,8 @@ export default function App() {
             <Route path="/investments" element={<InvestmentsPage />} />
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/messages" element={<MessagesPage />} />
+            <Route path="/detect/:id" element={<DetectTransactionPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

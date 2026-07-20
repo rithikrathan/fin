@@ -327,6 +327,47 @@ function appReducer(state: AppState, action: AppAction): AppState {
 
     case 'UPDATE_SETTINGS':
       return { ...state, settings: { ...state.settings, ...action.payload } };
+
+    case 'ADD_PATTERN':
+      return { ...state, message_patterns: [...state.message_patterns, action.payload] };
+    case 'UPDATE_PATTERN':
+      return {
+        ...state,
+        message_patterns: state.message_patterns.map((p) =>
+          p.id === action.payload.id ? action.payload : p,
+        ),
+      };
+    case 'REMOVE_PATTERN':
+      return {
+        ...state,
+        message_patterns: state.message_patterns.filter((p) => p.id !== action.payload),
+      };
+
+    case 'ADD_SMS_LOG':
+      return { ...state, sms_logs: [...state.sms_logs, action.payload] };
+    case 'UPDATE_SMS_LOG':
+      return {
+        ...state,
+        sms_logs: state.sms_logs.map((l) =>
+          l.id === action.payload.id ? action.payload : l,
+        ),
+      };
+
+    case 'ADD_DETECTED_TX':
+      return { ...state, detected_transactions: [...state.detected_transactions, action.payload] };
+    case 'UPDATE_DETECTED_TX':
+      return {
+        ...state,
+        detected_transactions: state.detected_transactions.map((d) =>
+          d.id === action.payload.id ? action.payload : d,
+        ),
+      };
+    case 'REMOVE_DETECTED_TX':
+      return {
+        ...state,
+        detected_transactions: state.detected_transactions.filter((d) => d.id !== action.payload),
+      };
+
     case 'LOAD_DATA':
       return { ...action.payload, loading: false };
     case 'DELETE_ALL':

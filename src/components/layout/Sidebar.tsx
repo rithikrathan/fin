@@ -8,6 +8,7 @@ const links = [
     { to: '/expenses', label: 'Expenses', icon: '◇' },
     { to: '/investments', label: 'Investments', icon: '▲' },
     { to: '/reports', label: 'Reports', icon: '▤' },
+    { to: '/messages', label: 'Messages', icon: '✉' },
     { to: '/settings', label: 'Settings', icon: '⚙' },
 ];
 
