@@ -111,8 +111,8 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install NDK
-        run: sdkmanager "ndk;27.0.12077973"
+      - name: Install NDK and build-tools
+        run: sdkmanager "ndk;27.0.12077973" "build-tools;34.0.0" "platforms;android-34"
 
       - name: Install frontend dependencies
         run: npm ci
@@ -120,27 +120,20 @@ jobs:
       - name: Build Frontend
         run: npx vite build
 
-      - name: Install ImageMagick
-        run: sudo apt-get install -y imagemagick
-
       - name: Init Tauri Android
-        run: npx tauri android init
+        run: echo "y" | npx tauri android init
 
-      - name: Set app name and icons
+      - name: Set app name
         run: |
           ANDROID_RES="src-tauri/gen/android/app/src/main/res"
           mkdir -p "$ANDROID_RES/values"
           echo '<resources><string name="app_name">Fin</string></resources>' > "$ANDROID_RES/values/strings.xml"
-          for size_dir in "mdpi:48" "hdpi:72" "xhdpi:96" "xxhdpi:144" "xxxhdpi:192"; do
-            dir="${size_dir%%:*}"
-            px="${size_dir##*:}"
-            mkdir -p "$ANDROID_RES/mipmap-$dir"
-            convert src-tauri/icons/icon.png -resize "${px}x${px}" "$ANDROID_RES/mipmap-$dir/ic_launcher.png"
-            cp "$ANDROID_RES/mipmap-$dir/ic_launcher.png" "$ANDROID_RES/mipmap-$dir/ic_launcher_round.png"
-          done
+
+      - name: Generate app icons
+        run: npx tauri icon src-tauri/icons/icon.png
 
       - name: Build APK
-        run: npx tauri android build --debug --apk
+        run: npx tauri android build --apk
         env:
           NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
 
@@ -148,10 +141,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: android-apk
-          path: |
-            src-tauri/gen/android/app/build/outputs/apk/universalRelease/*.apk
-            src-tauri/gen/android/app/build/outputs/apk/*Release/*.apk
-            src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          path: src-tauri/gen/android/app/build/outputs/apk/**/*.apk
           if-no-files-found: error
 
   # Web standalone build
