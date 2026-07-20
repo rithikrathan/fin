@@ -107,7 +107,7 @@ jobs:
         run: npx tauri android init
 
       - name: Build APK
-        run: npx tauri android build -- --release
+        run: npx tauri android build
         env:
           NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
 
