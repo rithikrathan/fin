@@ -89,6 +89,7 @@ export interface Want {
   photo_url: string | null;
   purchase_link: string | null;
   added_at: string;
+  no_lock: boolean;
 }
 
 export interface Need {
@@ -166,6 +167,8 @@ export interface Settings {
   baseline_survival_amount: number;
   mock_salary: number;
   last_reconciliation: string | null;
+  cooling_off_hours: number;
+  waterfall_priority: number[];
 }
 
 export interface AppState {

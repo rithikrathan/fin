@@ -239,6 +239,7 @@ function WantForm({
         photo_url: photoUrl,
         purchase_link: purchaseLink || null,
         added_at: new Date().toISOString(),
+        no_lock: false,
       },
     });
     setName('');

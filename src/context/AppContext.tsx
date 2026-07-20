@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useReducer, useEffect, type ReactNode } from 'react';
 import type { AppState, AppAction, FundSnapshot } from '../types';
 import { initialState } from './initialState';
 import { round2 } from '../utils/helpers';

@@ -24,7 +24,7 @@ tmux new-window -t "$SESSION" -n "opencode" -c "$TARGET_DIR"
 tmux send-keys -t "$SESSION:opencode" "opencode" C-m
 
 tmux new-window -t "$SESSION" -n "devServer" -c "$TARGET_DIR"
-tmux send-keys -t "$SESSION:devServer" "npm run dev" C-m
+tmux send-keys -t "$SESSION:devServer" "npm run dev -- --host" C-m
  
 tmux select-window -t "$SESSION:editor"
 tmux attach-session -t "$SESSION"

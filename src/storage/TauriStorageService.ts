@@ -1,5 +1,5 @@
 import Database from '@tauri-apps/plugin-sql';
-import type { AppState, Fund, Milestone, FundSnapshot, Transaction, Want, Need, Investment, Debt, SavedReport, Settings, IncomeTransaction, ExpenseTransaction, TransferTransaction } from '../types/index.ts';
+import type { Fund, Milestone, FundSnapshot, Transaction, Want, Need, Investment, Debt, SavedReport, Settings, IncomeTransaction, ExpenseTransaction } from '../types/index.ts';
 import { initialState } from '../context/initialState.ts';
 import type { StorageService, StorageState } from './StorageService.ts';
 import schemaSql from './schema.sql?raw';
@@ -78,29 +78,26 @@ function parseMilestone(r: Record<string, unknown>): Milestone {
 
 function parseTransaction(r: Record<string, unknown>): Transaction {
   const type = String(r.type);
-  const base = {
-    id: rowToNumber(r.id),
-    date: String(r.date),
-    notes: String(r.notes || ''),
-    file_id: rowToOptionalString(r.file_id),
-    file_name: rowToOptionalString(r.file_name),
-  };
 
   if (type === 'income') {
     return {
-      ...base,
+      id: rowToNumber(r.id),
       type: 'income',
       name: String(r.name || ''),
       amount: rowToNumber(r.amount),
       income_type: String(r.income_type || 'monthly') as IncomeTransaction['income_type'],
       category: String(r.category || ''),
+      date: String(r.date),
+      notes: String(r.notes || ''),
       fund_allocation: r.fund_allocation ? JSON.parse(String(r.fund_allocation)) : {},
-    } as IncomeTransaction;
+      file_id: rowToOptionalString(r.file_id),
+      file_name: rowToOptionalString(r.file_name),
+    };
   }
 
   if (type === 'expense') {
     return {
-      ...base,
+      id: rowToNumber(r.id),
       type: 'expense',
       description: String(r.description || ''),
       amount: rowToNumber(r.amount),
@@ -108,18 +105,25 @@ function parseTransaction(r: Record<string, unknown>): Transaction {
       fund_id: rowToNumber(r.fund_id),
       fund_name: String(r.fund_name || ''),
       planned: rowToBool(r.planned),
+      date: String(r.date),
       is_misc: rowToBool(r.is_misc),
-    } as ExpenseTransaction;
+      notes: String(r.notes || ''),
+      file_id: rowToOptionalString(r.file_id),
+      file_name: rowToOptionalString(r.file_name),
+    };
   }
 
   return {
-    ...base,
+    id: rowToNumber(r.id),
     type: 'transfer',
     from_fund_id: rowToNumber(r.from_fund_id),
     to_fund_id: rowToNumber(r.to_fund_id),
     amount: rowToNumber(r.amount),
+    date: String(r.date),
     note: String(r.note || ''),
-  } as TransferTransaction;
+    file_id: rowToOptionalString(r.file_id),
+    file_name: rowToOptionalString(r.file_name),
+  };
 }
 
 function parseWant(r: Record<string, unknown>): Want {
@@ -227,22 +231,22 @@ export class TauriStorageService implements StorageService {
     const settings: Settings = { ...initialState.settings };
     for (const row of settingRows) {
       try {
-        (settings as Record<string, unknown>)[row.key] = JSON.parse(row.value);
+        (settings as unknown as Record<string, unknown>)[row.key] = JSON.parse(row.value);
       } catch {
-        (settings as Record<string, unknown>)[row.key] = row.value;
+        (settings as unknown as Record<string, unknown>)[row.key] = row.value;
       }
     }
 
     const state: StorageState = {
-      funds: (fundRows as Record<string, unknown>[]).map(parseFund),
-      fund_snapshots: (snapshotRows as Record<string, unknown>[]).map(parseSnapshot),
-      milestones: (milestoneRows as Record<string, unknown>[]).map(parseMilestone),
-      transactions: txRows.map(parseTransaction),
-      wants: (wantRows as Record<string, unknown>[]).map(parseWant),
-      needs: (needRows as Record<string, unknown>[]).map(parseNeed),
-      investments: (invRows as Record<string, unknown>[]).map(parseInvestment),
-      debts: (debtRows as Record<string, unknown>[]).map(parseDebt),
-      reports: (reportRows as Record<string, unknown>[]).map(parseReport),
+      funds: (fundRows as unknown as Record<string, unknown>[]).map(parseFund),
+      fund_snapshots: (snapshotRows as unknown as Record<string, unknown>[]).map(parseSnapshot),
+      milestones: (milestoneRows as unknown as Record<string, unknown>[]).map(parseMilestone),
+      transactions: (txRows as Record<string, unknown>[]).map(parseTransaction),
+      wants: (wantRows as unknown as Record<string, unknown>[]).map(parseWant),
+      needs: (needRows as unknown as Record<string, unknown>[]).map(parseNeed),
+      investments: (invRows as unknown as Record<string, unknown>[]).map(parseInvestment),
+      debts: (debtRows as unknown as Record<string, unknown>[]).map(parseDebt),
+      reports: (reportRows as unknown as Record<string, unknown>[]).map(parseReport),
       settings,
     };
 
@@ -280,7 +284,8 @@ export class TauriStorageService implements StorageService {
 
     await d.execute('DELETE FROM transactions');
     for (const tx of state.transactions) {
-      const base = [tx.id, tx.type, tx.date, tx.notes || '', tx.file_id, tx.file_name];
+      const notes = tx.type !== 'transfer' ? (tx as IncomeTransaction | ExpenseTransaction).notes : '';
+      const base = [tx.id, tx.type, tx.date, notes, tx.file_id, tx.file_name];
       if (tx.type === 'income') {
         await d.execute(
           'INSERT INTO transactions (id, type, date, notes, file_id, file_name, name, amount, income_type, category, fund_allocation) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)',
@@ -332,7 +337,7 @@ export class TauriStorageService implements StorageService {
     }
 
     await d.execute('DELETE FROM settings');
-    const settingsObj = state.settings as Record<string, unknown>;
+    const settingsObj = state.settings as unknown as Record<string, unknown>;
     for (const [key, value] of Object.entries(settingsObj)) {
       await d.execute('INSERT INTO settings (key, value) VALUES ($1, $2)', [key, JSON.stringify(value)]);
     }
@@ -357,7 +362,7 @@ export class TauriStorageService implements StorageService {
     const d = await getDb();
     const rows = await d.select<{ id: string; data: Uint8Array }[]>('SELECT * FROM files WHERE id = $1', [id]);
     if (rows.length === 0) return null;
-    return new Blob([rows[0].data]);
+    return new Blob([new Uint8Array(rows[0].data)]);
   }
 
   async removeFile(id: string): Promise<void> {
