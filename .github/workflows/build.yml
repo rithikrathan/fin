@@ -123,8 +123,29 @@ jobs:
       - name: Init Tauri Android
         run: npx tauri android init
 
+      - name: Set app name and icons
+        run: |
+          ANDROID_RES="src-tauri/gen/android/app/src/main/res"
+          
+          # App name
+          mkdir -p "$ANDROID_RES/values"
+          cat > "$ANDROID_RES/values/strings.xml" << 'EOF'
+          <resources>
+              <string name="app_name">Fin</string>
+          </resources>
+          EOF
+          
+          # Generate Android icons from icon.png
+          for size_dir in "mdpi:48" "hdpi:72" "xhdpi:96" "xxhdpi:144" "xxxhdpi:192"; do
+            dir="${size_dir%%:*}"
+            px="${size_dir##*:}"
+            mkdir -p "$ANDROID_RES/mipmap-$dir"
+            convert src-tauri/icons/icon.png -resize "${px}x${px}" "$ANDROID_RES/mipmap-$dir/ic_launcher.png"
+            cp "$ANDROID_RES/mipmap-$dir/ic_launcher.png" "$ANDROID_RES/mipmap-$dir/ic_launcher_round.png"
+          done
+
       - name: Build APK
-        run: npx tauri android build --apk
+        run: npx tauri android build --debug --apk
         env:
           NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
 
