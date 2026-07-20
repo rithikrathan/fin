@@ -120,6 +120,9 @@ jobs:
       - name: Build Frontend
         run: npx vite build
 
+      - name: Init Tauri Android
+        run: npx tauri android init
+
       - name: Build APK
         run: npx tauri android build -- --apk
         env:
