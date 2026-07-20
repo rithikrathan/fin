@@ -127,7 +127,7 @@ jobs:
         run: |
           ANDROID_RES="src-tauri/gen/android/app/src/main/res"
           mkdir -p "$ANDROID_RES/values"
-          echo '<resources><string name="app_name">Fin</string></resources>' > "$ANDROID_RES/values/strings.xml"
+          echo '<resources><string name="app_name">Fin</string><string name="main_activity_title">Fin</string></resources>' > "$ANDROID_RES/values/strings.xml"
 
       - name: Generate app icons
         run: npx tauri icon src-tauri/icons/icon.png
