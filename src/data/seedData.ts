@@ -196,10 +196,14 @@ export function getSeedState(): AppState {
       cooling_off_hours: 48,
       waterfall_priority: [],
       theme_mode: 'system',
+      animations_enabled: true,
     },
     message_patterns: [],
     sms_logs: [],
     detected_transactions: [],
+    balance_accounts: [],
+    balance_transactions: [],
+    balance_line_items: [],
     loading: false,
   };
 }
