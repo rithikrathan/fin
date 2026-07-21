@@ -3,6 +3,7 @@ import type { Fund, Milestone, FundSnapshot, Transaction, Want, Need, Investment
 import { initialState } from '../context/initialState.ts';
 import type { StorageService, StorageState } from './StorageService.ts';
 import schemaSql from './schema.sql?raw';
+import JSZip from 'jszip';
 
 const DB_PATH = 'sqlite:finmanager.db';
 
@@ -253,6 +254,7 @@ function parseDetectedTx(r: Record<string, unknown>): DetectedTransaction {
 
 export class TauriStorageService implements StorageService {
   private initialized = false;
+  private savePromise: Promise<void> = Promise.resolve();
 
   async init(): Promise<void> {
     if (this.initialized) return;
@@ -310,124 +312,140 @@ export class TauriStorageService implements StorageService {
   }
 
   async saveState(state: StorageState): Promise<void> {
-    await this.init();
-    const d = await getDb();
+    // Chain database writes sequentially to prevent SQLite locks and concurrent collision errors
+    this.savePromise = this.savePromise.then(async () => {
+      await this.init();
+      const d = await getDb();
+      try {
+        // Atomic transaction guarantees that intermediate states are not loaded and database disk commits are batched
+        await d.execute('BEGIN TRANSACTION');
 
-    await d.execute('DELETE FROM funds');
-    for (const f of state.funds) {
-      await d.execute(
-        'INSERT INTO funds (id, name, balance, allocation_pct, allocation_locked, color, deadline, goal_amount, interest_rate, interest_frequency, interest_calc_type, is_career_fund) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)',
-        [f.id, f.name, f.balance, f.allocation_pct, f.allocation_locked ? 1 : 0, f.color, f.deadline, f.goal_amount, f.interest_rate, f.interest_frequency, f.interest_calc_type, f.is_career_fund ? 1 : 0]
-      );
-    }
+        await d.execute('DELETE FROM funds');
+        for (const f of state.funds) {
+          await d.execute(
+            'INSERT INTO funds (id, name, balance, allocation_pct, allocation_locked, color, deadline, goal_amount, interest_rate, interest_frequency, interest_calc_type, is_career_fund) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)',
+            [f.id, f.name, f.balance, f.allocation_pct, f.allocation_locked ? 1 : 0, f.color, f.deadline, f.goal_amount, f.interest_rate, f.interest_frequency, f.interest_calc_type, f.is_career_fund ? 1 : 0]
+          );
+        }
 
-    await d.execute('DELETE FROM milestones');
-    for (const m of state.milestones) {
-      await d.execute(
-        'INSERT INTO milestones (id, fund_id, name, target_amount, reached) VALUES ($1,$2,$3,$4,$5)',
-        [m.id, m.fund_id, m.name, m.target_amount, m.reached ? 1 : 0]
-      );
-    }
+        await d.execute('DELETE FROM milestones');
+        for (const m of state.milestones) {
+          await d.execute(
+            'INSERT INTO milestones (id, fund_id, name, target_amount, reached) VALUES ($1,$2,$3,$4,$5)',
+            [m.id, m.fund_id, m.name, m.target_amount, m.reached ? 1 : 0]
+          );
+        }
 
-    await d.execute('DELETE FROM fund_snapshots');
-    for (const s of state.fund_snapshots) {
-      await d.execute(
-        'INSERT INTO fund_snapshots (id, fund_id, balance, date) VALUES ($1,$2,$3,$4)',
-        [s.id, s.fund_id, s.balance, s.date]
-      );
-    }
+        await d.execute('DELETE FROM fund_snapshots');
+        for (const s of state.fund_snapshots) {
+          await d.execute(
+            'INSERT INTO fund_snapshots (id, fund_id, balance, date) VALUES ($1,$2,$3,$4)',
+            [s.id, s.fund_id, s.balance, s.date]
+          );
+        }
 
-    await d.execute('DELETE FROM transactions');
-    for (const tx of state.transactions) {
-      const notes = tx.type !== 'transfer' ? (tx as IncomeTransaction | ExpenseTransaction).notes : '';
-      const base = [tx.id, tx.type, tx.date, notes, tx.file_id, tx.file_name];
-      if (tx.type === 'income') {
-        await d.execute(
-          'INSERT INTO transactions (id, type, date, notes, file_id, file_name, name, amount, income_type, category, fund_allocation) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)',
-          [...base, tx.name, tx.amount, tx.income_type, tx.category, JSON.stringify(tx.fund_allocation)]
-        );
-      } else if (tx.type === 'expense') {
-        await d.execute(
-          'INSERT INTO transactions (id, type, date, notes, file_id, file_name, description, amount, category, fund_id, fund_name, planned, is_misc) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)',
-          [...base, tx.description, tx.amount, tx.category, tx.fund_id, tx.fund_name, tx.planned ? 1 : 0, tx.is_misc ? 1 : 0]
-        );
-      } else {
-        await d.execute(
-          'INSERT INTO transactions (id, type, date, notes, file_id, file_name, from_fund_id, to_fund_id, amount, note) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
-          [...base, tx.from_fund_id, tx.to_fund_id, tx.amount, tx.note]
-        );
+        await d.execute('DELETE FROM transactions');
+        for (const tx of state.transactions) {
+          const notes = tx.type !== 'transfer' ? (tx as IncomeTransaction | ExpenseTransaction).notes : '';
+          const base = [tx.id, tx.type, tx.date, notes, tx.file_id, tx.file_name];
+          if (tx.type === 'income') {
+            await d.execute(
+              'INSERT INTO transactions (id, type, date, notes, file_id, file_name, name, amount, income_type, category, fund_allocation) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)',
+              [...base, tx.name, tx.amount, tx.income_type, tx.category, JSON.stringify(tx.fund_allocation)]
+            );
+          } else if (tx.type === 'expense') {
+            await d.execute(
+              'INSERT INTO transactions (id, type, date, notes, file_id, file_name, description, amount, category, fund_id, fund_name, planned, is_misc) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)',
+              [...base, tx.description, tx.amount, tx.category, tx.fund_id, tx.fund_name, tx.planned ? 1 : 0, tx.is_misc ? 1 : 0]
+            );
+          } else {
+            await d.execute(
+              'INSERT INTO transactions (id, type, date, notes, file_id, file_name, from_fund_id, to_fund_id, amount, note) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
+              [...base, tx.from_fund_id, tx.to_fund_id, tx.amount, tx.note]
+            );
+          }
+        }
+
+        await d.execute('DELETE FROM wants');
+        for (const w of state.wants) {
+          await d.execute(
+            'INSERT INTO wants (id, name, target_price, current_saved, category, priority, purchased, purchase_date, notes, days_to_buy, predicted_date, photo_url, purchase_link, added_at, no_lock) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)',
+            [w.id, w.name, w.target_price, w.current_saved, w.category, w.priority, w.purchased ? 1 : 0, w.purchase_date, w.notes, w.days_to_buy, w.predicted_date, w.photo_url, w.purchase_link, w.added_at, w.no_lock ? 1 : 0]
+          );
+        }
+
+        await d.execute('DELETE FROM needs');
+        for (const n of state.needs) {
+          await d.execute(
+            'INSERT INTO needs (id, name, amount, category, recurring, frequency, due_date, fund_id, fund_name, autopay, notes, active, reapproval_required) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)',
+            [n.id, n.name, n.amount, n.category, n.recurring ? 1 : 0, n.frequency, n.due_date, n.fund_id, n.fund_name, n.autopay ? 1 : 0, n.notes, n.active ? 1 : 0, n.reapproval_required ? 1 : 0]
+          );
+        }
+
+        await d.execute('DELETE FROM investments');
+        for (const i of state.investments) {
+          await d.execute(
+            'INSERT INTO investments (id, name, asset_type, invest_amount, current_value, purchase_date, notes) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+            [i.id, i.name, i.asset_type, i.invest_amount, i.current_value, i.purchase_date, i.notes]
+          );
+        }
+
+        await d.execute('DELETE FROM debts');
+        for (const dbRow of state.debts) {
+          await d.execute(
+            'INSERT INTO debts (id, name, total_principal, remaining_balance, emi_amount, interest_rate, due_date, linked_fund_id, notes, active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
+            [dbRow.id, dbRow.name, dbRow.total_principal, dbRow.remaining_balance, dbRow.emi_amount, dbRow.interest_rate, dbRow.due_date, dbRow.linked_fund_id, dbRow.notes, dbRow.active ? 1 : 0]
+          );
+        }
+
+        await d.execute('DELETE FROM settings');
+        const settingsObj = state.settings as unknown as Record<string, unknown>;
+        for (const [key, value] of Object.entries(settingsObj)) {
+          await d.execute('INSERT INTO settings (key, value) VALUES ($1, $2)', [key, JSON.stringify(value)]);
+        }
+
+        await d.execute('DELETE FROM reports');
+        for (const r of state.reports) {
+          await d.execute(
+            'INSERT INTO reports (id, name, period_start, period_end, generated_at, data) VALUES ($1,$2,$3,$4,$5,$6)',
+            [r.id, r.name, r.period_start, r.period_end, r.generated_at, JSON.stringify(r.data)]
+          );
+        }
+
+        await d.execute('DELETE FROM message_patterns');
+        for (const p of state.message_patterns) {
+          await d.execute(
+            'INSERT INTO message_patterns (id, name, source_app, example_sms, field_selectors, full_regex, message_type, enabled, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
+            [p.id, p.name, p.source_app, p.example_sms, JSON.stringify(p.field_selectors), p.full_regex, p.message_type, p.enabled ? 1 : 0, p.created_at, p.updated_at]
+          );
+        }
+
+        await d.execute('DELETE FROM sms_logs');
+        for (const s of state.sms_logs) {
+          await d.execute(
+            'INSERT INTO sms_logs (id, message_text, message_source, timestamp, pattern_id, matched, parsed_fields, transaction_id, dismissed, notification_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
+            [s.id, s.message_text, s.message_source, s.timestamp, s.pattern_id, s.matched ? 1 : 0, JSON.stringify(s.parsed_fields), s.transaction_id, s.dismissed ? 1 : 0, s.notification_id]
+          );
+        }
+
+        await d.execute('DELETE FROM detected_transactions');
+        for (const t of state.detected_transactions) {
+          await d.execute(
+            'INSERT INTO detected_transactions (id, sms_log_id, amount, tx_type, account_number, bank_name, merchant, date, balance_after, fund_id, category, notes, status, created_transaction_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)',
+            [t.id, t.sms_log_id, t.amount, t.type, t.account_number, t.bank_name, t.merchant, t.date, t.balance_after, t.fund_id, t.category, t.notes, t.status, t.created_transaction_id]
+          );
+        }
+
+        await d.execute('COMMIT');
+      } catch (e) {
+        try {
+          await d.execute('ROLLBACK');
+        } catch {}
+        console.error('Storage save failed, transaction rolled back:', e);
+        throw e;
       }
-    }
-
-    await d.execute('DELETE FROM wants');
-    for (const w of state.wants) {
-      await d.execute(
-        'INSERT INTO wants (id, name, target_price, current_saved, category, priority, purchased, purchase_date, notes, days_to_buy, predicted_date, photo_url, purchase_link, added_at, no_lock) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)',
-        [w.id, w.name, w.target_price, w.current_saved, w.category, w.priority, w.purchased ? 1 : 0, w.purchase_date, w.notes, w.days_to_buy, w.predicted_date, w.photo_url, w.purchase_link, w.added_at, w.no_lock ? 1 : 0]
-      );
-    }
-
-    await d.execute('DELETE FROM needs');
-    for (const n of state.needs) {
-      await d.execute(
-        'INSERT INTO needs (id, name, amount, category, recurring, frequency, due_date, fund_id, fund_name, autopay, notes, active, reapproval_required) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)',
-        [n.id, n.name, n.amount, n.category, n.recurring ? 1 : 0, n.frequency, n.due_date, n.fund_id, n.fund_name, n.autopay ? 1 : 0, n.notes, n.active ? 1 : 0, n.reapproval_required ? 1 : 0]
-      );
-    }
-
-    await d.execute('DELETE FROM investments');
-    for (const i of state.investments) {
-      await d.execute(
-        'INSERT INTO investments (id, name, asset_type, invest_amount, current_value, purchase_date, notes) VALUES ($1,$2,$3,$4,$5,$6,$7)',
-        [i.id, i.name, i.asset_type, i.invest_amount, i.current_value, i.purchase_date, i.notes]
-      );
-    }
-
-    await d.execute('DELETE FROM debts');
-    for (const db of state.debts) {
-      await d.execute(
-        'INSERT INTO debts (id, name, total_principal, remaining_balance, emi_amount, interest_rate, due_date, linked_fund_id, notes, active) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
-        [db.id, db.name, db.total_principal, db.remaining_balance, db.emi_amount, db.interest_rate, db.due_date, db.linked_fund_id, db.notes, db.active ? 1 : 0]
-      );
-    }
-
-    await d.execute('DELETE FROM settings');
-    const settingsObj = state.settings as unknown as Record<string, unknown>;
-    for (const [key, value] of Object.entries(settingsObj)) {
-      await d.execute('INSERT INTO settings (key, value) VALUES ($1, $2)', [key, JSON.stringify(value)]);
-    }
-
-    await d.execute('DELETE FROM reports');
-    for (const r of state.reports) {
-      await d.execute(
-        'INSERT INTO reports (id, name, period_start, period_end, generated_at, data) VALUES ($1,$2,$3,$4,$5,$6)',
-        [r.id, r.name, r.period_start, r.period_end, r.generated_at, JSON.stringify(r.data)]
-      );
-    }
-
-    await d.execute('DELETE FROM message_patterns');
-    for (const p of state.message_patterns) {
-      await d.execute(
-        'INSERT INTO message_patterns (id, name, source_app, example_sms, field_selectors, full_regex, message_type, enabled, created_at, updated_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
-        [p.id, p.name, p.source_app, p.example_sms, JSON.stringify(p.field_selectors), p.full_regex, p.message_type, p.enabled ? 1 : 0, p.created_at, p.updated_at]
-      );
-    }
-
-    await d.execute('DELETE FROM sms_logs');
-    for (const s of state.sms_logs) {
-      await d.execute(
-        'INSERT INTO sms_logs (id, message_text, message_source, timestamp, pattern_id, matched, parsed_fields, transaction_id, dismissed, notification_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
-        [s.id, s.message_text, s.message_source, s.timestamp, s.pattern_id, s.matched ? 1 : 0, JSON.stringify(s.parsed_fields), s.transaction_id, s.dismissed ? 1 : 0, s.notification_id]
-      );
-    }
-
-    await d.execute('DELETE FROM detected_transactions');
-    for (const t of state.detected_transactions) {
-      await d.execute(
-        'INSERT INTO detected_transactions (id, sms_log_id, amount, tx_type, account_number, bank_name, merchant, date, balance_after, fund_id, category, notes, status, created_transaction_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)',
-        [t.id, t.sms_log_id, t.amount, t.type, t.account_number, t.bank_name, t.merchant, t.date, t.balance_after, t.fund_id, t.category, t.notes, t.status, t.created_transaction_id]
-      );
-    }
+    });
+    return this.savePromise;
   }
 
   async storeFile(id: string, blob: Blob): Promise<void> {
@@ -455,12 +473,57 @@ export class TauriStorageService implements StorageService {
     return rows.map((r) => r.id);
   }
 
-  async exportZip(_state: StorageState): Promise<Blob> {
-    throw new Error('Zip export not implemented for Tauri — use native filesystem backup instead');
+  async exportZip(state: StorageState): Promise<Blob> {
+    const zip = new JSZip();
+
+    const meta = {
+      version: 1,
+      exported_at: new Date().toISOString(),
+      platform: 'tauri',
+      app_version: '0.1.0',
+    };
+
+    zip.file('data.json', JSON.stringify(state, null, 2));
+    zip.file('meta.json', JSON.stringify(meta, null, 2));
+
+    const filesFolder = zip.folder('files');
+    const fileIds = await this.listFiles();
+    for (const id of fileIds) {
+      const blob = await this.getFile(id);
+      if (blob) {
+        const ext = id.includes('.') ? id.split('.').pop() : 'bin';
+        filesFolder?.file(`${id}.${ext}`, blob);
+      }
+    }
+
+    return zip.generateAsync({ type: 'blob' });
   }
 
-  async importZip(_file: File): Promise<StorageState> {
-    throw new Error('Zip import not implemented for Tauri — use native filesystem restore instead');
+  async importZip(file: File): Promise<StorageState> {
+    const zip = await JSZip.loadAsync(file);
+
+    const dataFile = zip.file('data.json');
+    if (!dataFile) throw new Error('Invalid archive: missing data.json');
+
+    const dataText = await dataFile.async('string');
+    const data = JSON.parse(dataText) as StorageState;
+
+    const filesFolder = zip.folder('files');
+    if (filesFolder) {
+      const entries: JSZip.JSZipObject[] = [];
+      filesFolder.forEach((_path, entry) => {
+        if (!entry.dir) entries.push(entry);
+      });
+
+      for (const entry of entries) {
+        const name = entry.name.replace('files/', '');
+        const blob = await entry.async('blob');
+        const id = name.includes('.') ? name.split('.').slice(0, -1).join('.') : name;
+        await this.storeFile(id, blob);
+      }
+    }
+
+    return data;
   }
 
   async migrate(): Promise<boolean> {
