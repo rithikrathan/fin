@@ -5,6 +5,7 @@ import { formatCurrency, formatDate, getROI, generateId, assetTypeLabels } from 
 import Button from '../components/shared/Button';
 import Modal from '../components/shared/Modal';
 import EmptyState from '../components/shared/EmptyState';
+import { TrendingUp } from 'lucide-react';
 import FloatingAddButton from '../components/shared/FloatingAddButton';
 
 export default function InvestmentsPage() {
@@ -96,9 +97,10 @@ export default function InvestmentsPage() {
           </div>
           {state.investments.length === 0 ? (
             <EmptyState
-              icon="▲"
-              title="No investments"
-              description="Track your portfolio here."
+              icon={<TrendingUp className="w-8 h-8 text-brand" />}
+              title="No investments tracked"
+              description="Track your mutual funds, FDs, PPFs, and stocks portfolio here."
+              action={{ label: 'Add Holding', onClick: () => setFormOpen(true) }}
             />
           ) : (
             <div className="space-y-3">

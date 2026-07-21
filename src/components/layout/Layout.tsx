@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Outlet, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import { CreditCard, Landmark, PieChart, TrendingUp, BarChart3, Sliders } from 'lucide-react';
 import {
     HomeIcon,
     TransactionsIcon,
@@ -137,9 +138,9 @@ export default function Layout() {
                         <button
                             onClick={scrollToTop}
                             aria-label="Scroll to top"
-                            className={`fixed right-4 bottom-20 lg:bottom-6 z-30 w-10 h-10 rounded-full bg-[#191919]/90 border border-white/15 text-txt-primary flex items-center justify-center shadow-xl hover:bg-white/10 active:scale-90 transition-all duration-300 ease-out cursor-pointer backdrop-blur-md ${showScrollTop
-                                    ? 'opacity-100 translate-y-0 scale-100'
-                                    : 'opacity-0 translate-y-6 scale-75 pointer-events-none'
+                            className={`fixed right-4 bottom-20 lg:bottom-6 z-30 w-11 h-11 rounded-full bg-surface border border-border-subtle text-txt-primary flex items-center justify-center shadow-lg hover:border-brand/40 hover:text-brand active:scale-90 transition-all duration-300 ease-out cursor-pointer backdrop-blur-md ${showScrollTop
+                                ? 'opacity-100 translate-y-0 scale-100'
+                                : 'opacity-0 translate-y-6 scale-75 pointer-events-none'
                                 }`}
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
@@ -169,12 +170,12 @@ export default function Layout() {
                     <h3 className="text-xs uppercase tracking-wider font-bold text-txt-secondary mb-4">More Options</h3>
                     <div className="grid grid-cols-2 gap-3">
                         {[
-                            { to: '/balances', label: 'Store Balances', icon: TransactionsIcon },
-                            { to: '/debts', label: 'Debts & Loans', icon: TransactionsIcon },
-                            { to: '/funds', label: 'Funds Split', icon: FundsIcon },
-                            { to: '/investments', label: 'Investments', icon: DashboardIcon },
-                            { to: '/reports', label: 'Reports', icon: ReportsIcon },
-                            { to: '/settings', label: 'Settings', icon: SettingsIcon },
+                            { to: '/balances', label: 'Store Balances', icon: CreditCard },
+                            { to: '/debts', label: 'Debts & Loans', icon: Landmark },
+                            { to: '/funds', label: 'Funds Split', icon: PieChart },
+                            { to: '/investments', label: 'Investments', icon: TrendingUp },
+                            { to: '/reports', label: 'Reports', icon: BarChart3 },
+                            { to: '/settings', label: 'Settings', icon: Sliders },
                         ].map((item) => {
                             const Icon = item.icon;
                             return (

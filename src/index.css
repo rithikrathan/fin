@@ -10,7 +10,8 @@
   --color-txt-secondary: #A1A1AA;
   --color-border-subtle: rgba(255, 255, 255, 0.08);
 
-  --font-sans: 'Inter', 'SF Pro Display', sans-serif;
+  --font-sans: 'Merriweather', Georgia, serif;
+  --font-serif: 'Playfair Display', Georgia, serif;
   --font-mono: 'JetBrains Mono', 'Roboto Mono', monospace;
 
   --shadow-glow: 0 0 20px rgba(255, 42, 42, 0.4);
@@ -210,12 +211,18 @@ html.light input,
 html.light select,
 html.light textarea {
   color: #0F172A !important;
-  border-bottom-color: rgba(0, 0, 0, 0.15) !important;
+  background-color: #F8FAFC !important;
+  border-color: #CBD5E1 !important;
+}
+html.light input::placeholder,
+html.light textarea::placeholder {
+  color: #64748B !important;
 }
 html.light input:focus,
 html.light select:focus,
 html.light textarea:focus {
-  border-bottom-color: var(--color-brand) !important;
+  border-color: var(--color-brand) !important;
+  box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.15) !important;
 }
 html.light input::placeholder {
   color: #94A3B8 !important;

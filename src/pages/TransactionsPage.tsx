@@ -7,6 +7,7 @@ import Card from '../components/shared/Card';
 import Button from '../components/shared/Button';
 import Modal from '../components/shared/Modal';
 import EmptyState from '../components/shared/EmptyState';
+import { ReceiptText } from 'lucide-react';
 import FilePicker from '../components/shared/FilePicker';
 import { getStorageService } from '../storage/StorageService';
 import { MessagesIcon, DownloadIcon } from '../components/shared/Icons';
@@ -209,9 +210,9 @@ export default function TransactionsPage() {
       {viewMode === 'transactions' ? (
         sorted.length === 0 ? (
           <EmptyState
-            icon="⇄"
-            title="No transactions yet"
-            description="Add your first income or expense to get started."
+            icon={<ReceiptText className="w-8 h-8 text-brand" />}
+            title="No transactions recorded"
+            description="Add your first income or expense entry to start tracking your cash flow."
           />
         ) : (
           <div className="space-y-3">

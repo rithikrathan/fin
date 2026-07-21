@@ -2,14 +2,13 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { formatCurrency } from '../utils/helpers';
 import {
-    Wallet,
-    TrendingUp,
-    Receipt,
-    Store,
-    Split,
-    Settings,
-    ArrowRight,
-    ShieldCheck
+    ReceiptText,
+    PieChart,
+    CreditCard,
+    ShoppingBag,
+    LineChart,
+    Sliders,
+    ArrowRight
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -25,114 +24,115 @@ export default function HomePage() {
         {
             title: 'Ledger & Transaction Logs',
             description: 'Enter new income, log daily expenses, or record internal transfers.',
-            icon: Wallet,
+            icon: ReceiptText,
             to: '/transactions',
             actionText: 'Open Ledger'
         },
         {
             title: 'Cash Allocation Splits',
             description: 'Distribute incoming cash into Needs (50%), Wants (20%), and Savings (30%) funds.',
-            icon: Split,
+            icon: PieChart,
             to: '/funds',
             actionText: 'Allocate Funds'
         },
         {
             title: 'Store Balances & Ledgers',
             description: 'Store cards to manage Rolling billing tabs and payment histories.',
-            icon: Store,
+            icon: CreditCard,
             to: '/balances',
             actionText: 'Manage Stores'
         },
         {
             title: 'Monthly Bills & Wants Lists',
             description: 'Track recurring needs, one-time utilities, and predictive wants predictions.',
-            icon: Receipt,
+            icon: ShoppingBag,
             to: '/expenses',
             actionText: 'Review Lists'
         },
         {
             title: 'Analytics Dashboard',
             description: 'Deep dive into survival runway days, historic burn rate, and savings projection charts.',
-            icon: TrendingUp,
+            icon: LineChart,
             to: '/dashboard',
             actionText: 'View Analytics'
         },
         {
             title: 'System Preferences',
             description: 'Adjust expected monthly income, default currencies, light/dark themes, and motion.',
-            icon: Settings,
+            icon: Sliders,
             to: '/settings',
             actionText: 'Configure Settings'
         }
     ];
 
     return (
-        <div className="max-w-4xl mx-auto space-y-12 py-6 pb-28 px-4 relative overflow-hidden">
-            {/* Animated Ambient Glow */}
-            <div
-                className="absolute top-[-100px] left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full opacity-40 pointer-events-none blur-[100px] z-0 animate-ambient-drift"
-                style={{ background: 'radial-gradient(circle, var(--color-brand) 0%, transparent 70%)' }}
-            />
+        <div className="max-w-4xl mx-auto space-y-10 py-6 pb-28 px-4 relative overflow-hidden">
+            {/* ELEGANT SUBTLE BRAND RED & BLACK MESH BACKGROUND */}
+            <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
+                <div
+                    className="absolute top-[-160px] left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full opacity-20 blur-[140px] animate-ambient-drift"
+                    style={{ background: 'radial-gradient(circle, #FF2A2A 0%, rgba(255, 42, 42, 0.15) 50%, transparent 80%)' }}
+                />
+                <div
+                    className="absolute top-[320px] -right-[150px] w-[350px] h-[350px] rounded-full opacity-15 blur-[120px]"
+                    style={{ background: 'radial-gradient(circle, #FF2A2A 0%, transparent 75%)' }}
+                />
+            </div>
 
-            {/* 1. MINIMALIST TYPOGRAPHY HEADER */}
-            <div className="space-y-4 border-b border-white/[0.06] pb-8 relative z-10">
-                <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4">
+            {/* HERO STATS OVERVIEW */}
+            <div className="relative z-10 space-y-6 pt-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 p-6 rounded-3xl bg-surface/60 border border-white/10 backdrop-blur-xl shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
                     <div className="space-y-1">
-                        <h1 className="text-4xl font-extrabold tracking-tight text-txt-primary sm:text-5xl">
-                            control deck<span className="text-brand">.</span>
-                        </h1>
-                        <p className="text-sm text-txt-secondary max-w-md leading-relaxed">
-                            Navigate your financial environment. Track ledgers, split allocations, and view runway forecasts.
-                        </p>
-                    </div>
-
-                    <div className="text-left sm:text-right shrink-0">
-                        <span className="text-[10px] uppercase tracking-widest font-black text-txt-secondary block">
-                            Cumulative Net Worth
+                        <span className="text-[10px] uppercase tracking-widest font-black text-txt-secondary flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-brand animate-pulse" />
+                            Net Worth Overview
                         </span>
-                        <div className="font-mono text-3xl font-black text-txt-primary tracking-tight mt-0.5">
+                        <div className="font-mono text-4xl sm:text-5xl font-black text-txt-primary tracking-tight">
                             {formatCurrency(netWorth)}
                         </div>
-                        <span className="text-[10px] text-gain font-semibold flex items-center justify-start sm:justify-end gap-1 mt-1">
-                            <ShieldCheck className="w-3.5 h-3.5" />
-                            Allocated & Safe
-                        </span>
+                    </div>
+
+                    <div className="flex items-center gap-6 border-t sm:border-t-0 sm:border-l border-white/10 pt-4 sm:pt-0 sm:pl-6">
+                        <div>
+                            <span className="text-[10px] uppercase tracking-wider text-txt-secondary block font-bold">Liquid Cash</span>
+                            <span className="font-mono text-base font-bold text-txt-primary">{formatCurrency(totalBalance)}</span>
+                        </div>
+                        <div>
+                            <span className="text-[10px] uppercase tracking-wider text-txt-secondary block font-bold">Invested</span>
+                            <span className="font-mono text-base font-bold text-gain">{formatCurrency(totalCurrentValue)}</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* 2. PREMIUM LINEAR ROUTE LAUNCHERS (Minimalist split lists instead of card blocks) */}
-            <div className="space-y-6">
-                <h3 className="text-xs uppercase tracking-wider font-bold text-txt-secondary tracking-widest">
-                    Navigation Nodes
+            {/* NAVIGATION NODES WITH GLOWING SYMBOL BADGES */}
+            <div className="space-y-4 relative z-10">
+                <h3 className="text-xs uppercase tracking-widest font-black text-txt-secondary px-1">
+                    Hub Nodes
                 </h3>
 
-                <div className="divide-y divide-white/[0.06] border-b border-white/[0.06]">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {routes.map((route, idx) => {
                         const Icon = route.icon;
                         return (
                             <div
                                 key={idx}
                                 onClick={() => navigate(route.to)}
-                                className="group py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer hover:bg-white/[0.01] transition-all px-2 -mx-2 rounded-xl"
+                                className="group relative p-5 rounded-2xl bg-white/[0.02] hover:bg-white/[0.05] border border-white/10 hover:border-brand/50 transition-all duration-300 cursor-pointer shadow-[0_4px_20px_rgba(0,0,0,0.2)] hover:shadow-[0_0_25px_rgba(255,42,42,0.25)] flex items-start gap-4"
                             >
-                                <div className="flex items-start gap-4 min-w-0">
-                                    <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-txt-secondary group-hover:border-brand/30 group-hover:text-brand transition-colors shrink-0 mt-0.5">
-                                        <Icon className="w-5 h-5" />
-                                    </div>
-                                    <div className="space-y-1 min-w-0">
-                                        <h4 className="font-bold text-base text-txt-primary group-hover:text-brand transition-colors truncate">
+                                <div className="w-11 h-11 rounded-2xl bg-brand/10 border border-brand/30 flex items-center justify-center text-brand shrink-0 group-hover:scale-110 group-hover:bg-brand group-hover:text-white transition-all duration-300 shadow-[0_0_15px_rgba(255,42,42,0.3)]">
+                                    <Icon className="w-5.5 h-5.5" />
+                                </div>
+                                <div className="space-y-1 min-w-0 flex-1">
+                                    <div className="flex items-center justify-between">
+                                        <h4 className="font-extrabold text-sm text-txt-primary group-hover:text-brand transition-colors">
                                             {route.title}
                                         </h4>
-                                        <p className="text-xs text-txt-secondary leading-relaxed max-w-xl">
-                                            {route.description}
-                                        </p>
+                                        <ArrowRight className="w-4 h-4 text-txt-secondary group-hover:text-brand group-hover:translate-x-1 transition-all" />
                                     </div>
-                                </div>
-
-                                <div className="flex items-center gap-1.5 text-xs font-bold text-txt-secondary group-hover:text-brand transition-colors shrink-0 self-end sm:self-center">
-                                    <span>{route.actionText}</span>
-                                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                                    <p className="text-xs text-txt-secondary/80 leading-relaxed line-clamp-2">
+                                        {route.description}
+                                    </p>
                                 </div>
                             </div>
                         );

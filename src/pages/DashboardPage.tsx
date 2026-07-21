@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { formatCurrency, formatDate } from '../utils/helpers';
 import Card from '../components/shared/Card';
-import { HomeIcon } from '../components/shared/Icons';
+import EmptyState from '../components/shared/EmptyState';
+import { BarChart3 } from 'lucide-react';
 import PredictionsContent from '../components/predictions/PredictionsContent';
 import {
     XAxis,
@@ -170,17 +171,12 @@ export default function DashboardPage() {
     if (!hasData) {
         return (
             <div className="max-w-5xl mx-auto">
-                <div className="flex flex-col items-center justify-center py-24 sm:py-32 text-center px-4">
-                    <div className="h-20 w-20 rounded-2xl bg-brand/10 border border-brand/20 shadow-glow-lg flex items-center justify-center text-brand mb-8 animate-pulse">
-                        <HomeIcon className="w-10 h-10" />
-                    </div>
-                    <h1 className="text-3xl sm:text-4xl font-bold text-txt-primary mb-4 tracking-tight">
-                        Welcome to Fin
-                    </h1>
-                    <p className="text-base sm:text-lg text-txt-secondary max-w-md leading-relaxed">
-                        Track your income, split into needs/wants/savings funds, and log expenses.
-                    </p>
-                </div>
+                <EmptyState
+                    icon={<BarChart3 className="w-9 h-9 text-brand" />}
+                    title="No Analytics Available"
+                    description="Log transactions and income to generate real-time analytics, runway forecasts, and burn-rate charts."
+                    action={{ label: 'Add First Transaction', onClick: () => navigate('/transactions') }}
+                />
             </div>
         );
     }

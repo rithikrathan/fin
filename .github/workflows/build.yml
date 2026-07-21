@@ -134,14 +134,42 @@ jobs:
 
       - name: Setup Android signing
         run: |
-          KEYSTORE_PATH="src-tauri/gen/android/app/release.jks"
+          KEYSTORE_PATH="${{ github.workspace }}/src-tauri/gen/android/app/release.jks"
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > "$KEYSTORE_PATH"
+
           cat > src-tauri/gen/android/key.properties <<EOF
           storePassword=${{ secrets.KEYSTORE_PASSWORD }}
           keyPassword=${{ secrets.KEY_PASSWORD }}
           keyAlias=${{ secrets.KEY_ALIAS }}
           storeFile=$KEYSTORE_PATH
           EOF
+          sed -i 's/^[[:space:]]*//' src-tauri/gen/android/key.properties
+
+          cat > src-tauri/gen/android/signing.gradle <<'GRADLE'
+          android {
+              signingConfigs {
+                  create("release") {
+                      val keyProperties = java.util.Properties()
+                      val keyPropertiesFile = rootProject.file("key.properties")
+                      if (keyPropertiesFile.exists()) {
+                          keyProperties.load(keyPropertiesFile.inputStream())
+                          storeFile = file(keyProperties["storeFile"] as String)
+                          storePassword = keyProperties["storePassword"] as String
+                          keyAlias = keyProperties["keyAlias"] as String
+                          keyPassword = keyProperties["keyPassword"] as String
+                      }
+                  }
+              }
+              buildTypes {
+                  getByName("release") {
+                      signingConfig = signingConfigs.getByName("release")
+                  }
+              }
+          }
+          GRADLE
+          sed -i 's/^[[:space:]]*//' src-tauri/gen/android/signing.gradle
+
+          echo 'apply(from = "../signing.gradle")' >> src-tauri/gen/android/app/build.gradle.kts
 
       - name: Build APK
         id: android-build

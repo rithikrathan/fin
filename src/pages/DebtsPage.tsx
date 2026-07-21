@@ -10,6 +10,7 @@ import FloatingAddButton from '../components/shared/FloatingAddButton';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
+import { Landmark } from 'lucide-react';
 
 const AXIS_COLOR = '#A1A1AA';
 
@@ -92,7 +93,7 @@ export default function DebtsPage() {
       </div>
 
       {activeDebts.length === 0 ? (
-        <EmptyState icon="▽" title="No active debts" description="Add loans, EMIs, or credit cards to track." />
+        <EmptyState icon={<Landmark className="w-8 h-8 text-brand" />} title="No active debts" description="Add loans, EMIs, or credit cards to track." />
       ) : (
         <div className="space-y-3">
           {activeDebts.map((debt) => (

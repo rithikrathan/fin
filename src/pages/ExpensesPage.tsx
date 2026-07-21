@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import type { Want } from '../types';
@@ -7,7 +8,7 @@ import Button from '../components/shared/Button';
 import Modal from '../components/shared/Modal';
 import EmptyState from '../components/shared/EmptyState';
 import FloatingAddButton from '../components/shared/FloatingAddButton';
-import { Plus, Check, ExternalLink, Sparkles } from 'lucide-react';
+import { Plus, Check, ExternalLink, Sparkles, ArrowLeftRight, ReceiptText, ShoppingBag } from 'lucide-react';
 
 export default function ExpensesPage() {
     const { state, dispatch } = useApp();
@@ -110,13 +111,14 @@ export default function ExpensesPage() {
                     {/* Needs list */}
                     {filteredNeeds.length === 0 ? (
                         <EmptyState
-                            icon="▽"
+                            icon={<ReceiptText className="w-8 h-8 text-brand" />}
                             title={`No ${needsSubTab} needs`}
                             description={
                                 needsSubTab === 'recurring'
                                     ? 'Add your recurring bills, rent, subscriptions, etc.'
                                     : 'Add one-time purchases or payments you need to make.'
                             }
+                            action={{ label: 'Add Need', onClick: () => setNeedFormOpen(true) }}
                         />
                     ) : (
                         <div className="space-y-3">
@@ -233,9 +235,10 @@ export default function ExpensesPage() {
 
                     {pendingWants.length === 0 ? (
                         <EmptyState
-                            icon="☆"
+                            icon={<ShoppingBag className="w-8 h-8 text-brand" />}
                             title="No pending wants"
                             description="Add something you're saving for."
+                            action={{ label: 'Add Want', onClick: () => setWantFormOpen(true) }}
                         />
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
@@ -265,10 +268,32 @@ export default function ExpensesPage() {
                 onClick={() => (activeTab === 'needs' ? setNeedFormOpen(true) : setWantFormOpen(true))}
             />
 
+            {/* Left-Side Viewport Category Selector Dropdown (Rendered in top-level body portal at same level as FAB) */}
+            <CategoryDropdownPortal activeTab={activeTab} navigate={navigate} />
+
             {/* Form Modals */}
             <NeedForm open={needFormOpen} onClose={() => setNeedFormOpen(false)} funds={state.funds} dispatch={dispatch} />
             <WantForm open={wantFormOpen} onClose={() => setWantFormOpen(false)} dispatch={dispatch} />
         </div>
+    );
+}
+
+function CategoryDropdownPortal({ activeTab, navigate }: { activeTab: 'needs' | 'wants'; navigate: (path: string) => void }) {
+    const targetTab = activeTab === 'needs' ? 'wants' : 'needs';
+
+    return createPortal(
+        <div className="fab-container fixed left-4 bottom-20 z-50 lg:hidden">
+            <button
+                onClick={() => navigate(`/expenses?tab=${targetTab}`)}
+                className="group flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#121212] border border-brand/60 text-txt-primary shadow-[0_0_18px_rgba(255,42,42,0.35),inset_0_0_10px_rgba(255,42,42,0.15)] hover:shadow-[0_0_24px_rgba(255,42,42,0.5),inset_0_0_14px_rgba(255,42,42,0.25)] hover:border-brand active:scale-90 transition-all duration-300 backdrop-blur-md cursor-pointer select-none font-bold text-[11px]"
+            >
+                <ArrowLeftRight className={`w-3.5 h-3.5 text-brand transition-transform duration-500 ease-out group-hover:rotate-180 ${activeTab === 'wants' ? 'rotate-180' : 'rotate-0'}`} />
+                <span className="capitalize text-txt-primary font-bold tracking-wide">
+                    To {targetTab}
+                </span>
+            </button>
+        </div>,
+        document.body
     );
 }
 

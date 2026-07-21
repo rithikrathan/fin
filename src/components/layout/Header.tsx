@@ -11,16 +11,16 @@ import {
 } from '../shared/Icons';
 
 const routeConfig: Record<string, { title: string; icon: React.ComponentType<{ className?: string }> }> = {
-    '/': { title: 'Fin Hub', icon: HomeIcon },
-    '/dashboard': { title: 'Financial Dashboard', icon: DashboardIcon },
-    '/expenses': { title: 'Monthly Expenses', icon: ExpensesIcon },
+    '/': { title: 'Overview', icon: HomeIcon },
+    '/dashboard': { title: 'Analytics', icon: DashboardIcon },
+    '/expenses': { title: 'Expenses', icon: ExpensesIcon },
     '/transactions': { title: 'Ledger', icon: TransactionsIcon },
-    '/funds': { title: 'Funds Split', icon: FundsIcon },
-    '/funds/manage': { title: 'Manage Funds', icon: FundsIcon },
-    '/investments': { title: 'Investments', icon: DashboardIcon },
-    '/balances': { title: 'Store Balances', icon: TransactionsIcon },
-    '/debts': { title: 'Debts & Loan Tracker', icon: TransactionsIcon },
-    '/predictions': { title: 'Predictions & Projections', icon: DashboardIcon },
+    '/funds': { title: 'Funds', icon: FundsIcon },
+    '/funds/manage': { title: 'Allocations', icon: FundsIcon },
+    '/investments': { title: 'Portfolio', icon: DashboardIcon },
+    '/balances': { title: 'Balances', icon: TransactionsIcon },
+    '/debts': { title: 'Debts', icon: TransactionsIcon },
+    '/predictions': { title: 'Forecasts', icon: DashboardIcon },
     '/reports': { title: 'Reports', icon: ReportsIcon },
     '/settings': { title: 'Settings', icon: SettingsIcon },
 };
@@ -48,7 +48,7 @@ export default function Header() {
                     alt="Fin Logo"
                     className="w-9 h-9 rounded-xl shrink-0 shadow-[0_0_15px_rgba(255,42,42,0.35)] object-cover"
                 />
-                <h1 className="text-xl sm:text-2xl font-bold text-txt-primary truncate">{current.title}</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold font-serif text-txt-primary truncate tracking-tight">{current.title}</h1>
             </div>
         </header>
     );
