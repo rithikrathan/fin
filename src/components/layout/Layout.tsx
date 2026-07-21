@@ -7,10 +7,7 @@ import {
     HomeIcon,
     TransactionsIcon,
     ExpensesIcon,
-    FundsIcon,
     DashboardIcon,
-    ReportsIcon,
-    SettingsIcon
 } from '../shared/Icons';
 
 const bottomLinks = [

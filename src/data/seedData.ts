@@ -1,25 +1,4 @@
-import type { AppState, Fund, IncomeTransaction, ExpenseTransaction, Want, Need, Investment, Debt, FundSnapshot } from '../types';
-
-function daysAgo(n: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return d.toISOString().split('T')[0];
-}
-
-function monthsAgo(n: number): string {
-  const d = new Date();
-  d.setMonth(d.getMonth() - n);
-  return d.toISOString().split('T')[0];
-}
-
-function daysFromNow(n: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() + n);
-  return d.toISOString().split('T')[0];
-}
-
-let _id = 100;
-function id(): number { return _id++; }
+import type { AppState } from '../types';
 
 export function getSeedState(): AppState {
   return {
