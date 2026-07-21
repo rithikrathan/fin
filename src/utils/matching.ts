@@ -70,6 +70,18 @@ export function escapeRegex(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+export function generalizeStaticText(text: string): string {
+  let clean = escapeRegex(text);
+  // Replace unselected standard dates (e.g. 09-07-26, 09/07/2026) with generic regex matcher
+  clean = clean.replace(/\b\d{2}[-/]\d{2}[-/]\d{2,4}\b/g, '\\d{2}[-/]\\d{2}[-/]\\d{2,4}');
+  clean = clean.replace(/\b\d{2}[-/][A-Za-z]{3,}[-/]\d{2,4}\b/g, '\\d{2}[-/][A-Za-z]{3,}[-/]\\d{2,4}');
+  
+  // Replace unselected numbers (length >= 4, e.g. UPI refs, help lines, account tokens) with \d+
+  clean = clean.replace(/\b\d{4,}\b/g, '\\d+');
+  
+  return clean;
+}
+
 interface TextSelection {
   fieldName: string;
   selectedText: string;
@@ -89,7 +101,7 @@ export function generateRegexFromSelections(
     if (sel.start < lastEnd) continue;
 
     const before = exampleSms.slice(lastEnd, sel.start);
-    regex += escapeRegex(before);
+    regex += generalizeStaticText(before);
 
     if (['amount', 'balance'].includes(sel.fieldName)) {
       regex += '([\\d,]+\\.?\\d*)';
@@ -102,7 +114,7 @@ export function generateRegexFromSelections(
     lastEnd = sel.end;
   }
 
-  regex += escapeRegex(exampleSms.slice(lastEnd));
+  regex += generalizeStaticText(exampleSms.slice(lastEnd));
   regex = regex.replace(/\s+/g, '\\s+').replace(/^\\s\+/, '').replace(/\\s\+$/, '');
 
   return regex;

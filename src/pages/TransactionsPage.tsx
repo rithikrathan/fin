@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import type { IncomeType, IncomeTransaction, ExpenseTransaction } from '../types';
+import type { IncomeType, IncomeTransaction, ExpenseTransaction, SmsLog } from '../types';
 import { formatCurrency, formatDate, generateId, round2 } from '../utils/helpers';
 import Card from '../components/shared/Card';
 import Button from '../components/shared/Button';
@@ -9,13 +10,27 @@ import Modal from '../components/shared/Modal';
 import EmptyState from '../components/shared/EmptyState';
 import FilePicker from '../components/shared/FilePicker';
 import { getStorageService } from '../storage/StorageService';
+import { MessagesIcon } from '../components/shared/Icons';
+import { runPatterns } from '../utils/matching';
 
 export default function TransactionsPage() {
   const { state, dispatch } = useApp();
+  const navigate = useNavigate();
+
+  // Unified view state to switch between transactions ledger and messages log
+  const [viewMode, setViewMode] = useState<'transactions' | 'messages'>('transactions');
+
+  // Transactions list filter and modal states
   const [incomeOpen, setIncomeOpen] = useState(false);
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
 
+  // Messages log states
+  const [msgFilter, setMsgFilter] = useState<'all' | 'matched' | 'unmatched' | 'created' | 'dismissed'>('all');
+  const [addMsgOpen, setAddMsgOpen] = useState(false);
+  const [manualText, setManualText] = useState('');
+
+  // Transactions filtering and sorting
   const filtered = state.transactions.filter((t) => {
     if (filter === 'all') return true;
     return t.type === filter;
@@ -25,55 +40,230 @@ export default function TransactionsPage() {
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
   );
 
+  // Messages filtering and sorting
+  const filteredMsgs = state.sms_logs.filter((log) => {
+    if (msgFilter === 'matched') return log.matched && !log.transaction_id && !log.dismissed;
+    if (msgFilter === 'unmatched') return !log.matched && !log.dismissed;
+    if (msgFilter === 'created') return !!log.transaction_id;
+    if (msgFilter === 'dismissed') return log.dismissed;
+    return true;
+  });
+
+  const sortedMsgs = [...filteredMsgs].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
+
+  // Count of logs that matched but have no transaction yet and aren't dismissed
+  const unhandledMsgCount = state.sms_logs.filter(
+    (l) => l.matched && !l.transaction_id && !l.dismissed
+  ).length;
+
+  const addManualMessage = () => {
+    if (!manualText.trim()) return;
+    const match = runPatterns(manualText, state.message_patterns);
+    const log: SmsLog = {
+      id: crypto.randomUUID(),
+      message_text: manualText.trim(),
+      message_source: null,
+      timestamp: new Date().toISOString(),
+      pattern_id: match?.pattern.id || null,
+      matched: !!match,
+      parsed_fields: match?.fields || {},
+      transaction_id: null,
+      dismissed: false,
+      notification_id: null,
+    };
+    dispatch({ type: 'ADD_SMS_LOG', payload: log });
+    setManualText('');
+    setAddMsgOpen(false);
+  };
+
+  const dismissMsg = (id: string) => {
+    const log = state.sms_logs.find((l) => l.id === id);
+    if (log) dispatch({ type: 'UPDATE_SMS_LOG', payload: { ...log, dismissed: true } });
+  };
+
+  const getPatternName = (patternId: string | null) => {
+    if (!patternId) return null;
+    return state.message_patterns.find((p) => p.id === patternId)?.name || null;
+  };
+
   return (
     <div className="max-w-5xl mx-auto space-y-6">
+      {/* Header controls row */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="flex items-center gap-3">
-          {(['all', 'income', 'expense'] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
-                filter === f
-                  ? 'bg-brand/15 text-brand'
-                  : 'text-txt-secondary hover:text-txt-primary hover:bg-white/[0.04]'
-              }`}
-            >
-              {f.charAt(0).toUpperCase() + f.slice(1)}
-            </button>
-          ))}
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button variant="ghost" size="sm" onClick={() => exportCSV(sorted, state)}>
-            CSV
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => exportPDF(sorted, state)}>
-            PDF
-          </Button>
-          <Button variant="primary" size="sm" onClick={() => setIncomeOpen(true)}>
-            + Income
-          </Button>
-          <Button variant="secondary" size="sm" onClick={() => setExpenseOpen(true)}>
-            + Expense
-          </Button>
-        </div>
+        {viewMode === 'transactions' ? (
+          <>
+            <div className="flex items-center gap-3">
+              {(['all', 'income', 'expense'] as const).map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setFilter(f)}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+                    filter === f
+                      ? 'bg-brand/15 text-brand'
+                      : 'text-txt-secondary hover:text-txt-primary hover:bg-white/[0.04]'
+                  }`}
+                >
+                  {f.charAt(0).toUpperCase() + f.slice(1)}
+                </button>
+              ))}
+            </div>
+            <div className="flex gap-2 flex-wrap items-center">
+              <Button variant="ghost" size="sm" onClick={() => exportCSV(sorted, state)}>
+                CSV
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => exportPDF(sorted, state)}>
+                PDF
+              </Button>
+              <Button variant="primary" size="sm" onClick={() => setIncomeOpen(true)}>
+                + Income
+              </Button>
+              <Button variant="secondary" size="sm" onClick={() => setExpenseOpen(true)}>
+                + Expense
+              </Button>
+              <div className="relative">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setViewMode('messages')}
+                  className="!px-3 flex items-center justify-center min-h-[44px]"
+                  title="SMS Messages Log"
+                >
+                  <MessagesIcon className="w-5 h-5 text-txt-secondary hover:text-txt-primary" />
+                  {unhandledMsgCount > 0 && (
+                    <span className="absolute -top-1 -right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-brand text-[9px] font-bold text-white shadow-glow animate-pulse">
+                      {unhandledMsgCount}
+                    </span>
+                  )}
+                </Button>
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="flex gap-2 overflow-x-auto pb-1 max-w-full">
+              {(['all', 'matched', 'unmatched', 'created', 'dismissed'] as const).map((f) => {
+                const label = f === 'created' ? 'Transaction Created' : f.charAt(0).toUpperCase() + f.slice(1);
+                let count = state.sms_logs.length;
+                if (f === 'matched') count = state.sms_logs.filter((l) => l.matched && !l.transaction_id && !l.dismissed).length;
+                else if (f === 'unmatched') count = state.sms_logs.filter((l) => !l.matched && !l.dismissed).length;
+                else if (f === 'created') count = state.sms_logs.filter((l) => !!l.transaction_id).length;
+                else if (f === 'dismissed') count = state.sms_logs.filter((l) => l.dismissed).length;
+
+                return (
+                  <button
+                    key={f}
+                    onClick={() => setMsgFilter(f)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-colors cursor-pointer ${
+                      msgFilter === f
+                        ? 'bg-brand/15 text-brand border border-brand/30'
+                        : 'text-txt-secondary hover:text-txt-primary bg-white/[0.04] border border-transparent'
+                    }`}
+                  >
+                    {label} ({count})
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex gap-2 items-center flex-wrap">
+              <Button variant="primary" size="sm" onClick={() => setAddMsgOpen(true)}>
+                + Add Message
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setViewMode('transactions')}
+                className="flex items-center gap-1.5"
+              >
+                Back to Ledger
+              </Button>
+            </div>
+          </>
+        )}
       </div>
 
-      {sorted.length === 0 ? (
-        <EmptyState
-          icon="⇄"
-          title="No transactions yet"
-          description="Add your first income or expense to get started."
-          action={{ label: '+ Add Income', onClick: () => setIncomeOpen(true) }}
-        />
+      {viewMode === 'transactions' ? (
+        sorted.length === 0 ? (
+          <EmptyState
+            icon="⇄"
+            title="No transactions yet"
+            description="Add your first income or expense to get started."
+            action={{ label: '+ Add Income', onClick: () => setIncomeOpen(true) }}
+          />
+        ) : (
+          <div className="space-y-2">
+            {sorted.map((tx) => (
+              <TransactionRow key={tx.id} tx={tx} funds={state.funds} dispatch={dispatch} />
+            ))}
+          </div>
+        )
       ) : (
-        <div className="space-y-2">
-          {sorted.map((tx) => (
-            <TransactionRow key={tx.id} tx={tx} funds={state.funds} dispatch={dispatch} />
-          ))}
-        </div>
+        sortedMsgs.length === 0 ? (
+          <Card className="p-8 text-center bg-white/[0.02]">
+            <p className="text-txt-secondary text-sm">
+              {state.sms_logs.length === 0
+                ? 'No messages yet. Add a message manually or wait for Android capture sync.'
+                : 'No messages match this filter.'}
+            </p>
+          </Card>
+        ) : (
+          <div className="space-y-2">
+            {sortedMsgs.map((log) => (
+              <Card key={log.id} className="p-4 bg-white/[0.02] border border-white/[0.04] transition-all hover:bg-white/[0.03]">
+                <div className="flex items-start gap-3">
+                  <div className={`w-2.5 h-2.5 rounded-full mt-1.5 shrink-0 shadow-sm ${
+                    log.transaction_id ? 'bg-green-400 shadow-green-400/50' : log.matched ? 'bg-amber-400 shadow-amber-400/50' : log.dismissed ? 'bg-txt-secondary/30' : 'bg-red-400 shadow-red-400/50'
+                  }`} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs text-txt-secondary font-mono mb-1">
+                      {new Date(log.timestamp).toLocaleString('en-IN')}
+                      {log.message_source ? ` · ${log.message_source}` : ''}
+                    </p>
+                    <p className="text-sm text-txt-primary whitespace-pre-wrap break-words">{log.message_text}</p>
+                    
+                    {log.matched && log.pattern_id && (
+                      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                        <span className="text-[10px] uppercase font-bold tracking-wider bg-brand/10 text-brand px-2 py-0.5 rounded border border-brand/20">
+                          {getPatternName(log.pattern_id)}
+                        </span>
+                        {Object.entries(log.parsed_fields).map(([k, v]) => (
+                          <span key={k} className="text-xs bg-white/[0.06] text-txt-secondary px-2 py-0.5 rounded border border-white/[0.03]">
+                            <span className="text-txt-secondary/60">{k}:</span> <span className="font-mono text-txt-primary">{v}</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {log.transaction_id && (
+                      <span className="text-xs bg-green-500/10 text-green-400 px-2 py-0.5 rounded border border-green-500/20 inline-block mt-2 font-medium">
+                        ✓ Transaction Created
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 shrink-0 self-center">
+                    {log.matched && !log.transaction_id && !log.dismissed && (
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => navigate(`/detect/${log.id}`)}
+                      >
+                        Detect
+                      </Button>
+                    )}
+                    {!log.dismissed && !log.transaction_id && (
+                      <Button variant="ghost" size="sm" onClick={() => dismissMsg(log.id)} className="text-txt-secondary hover:text-red-400">
+                        Dismiss
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )
       )}
 
+      {/* Modals */}
       <AddIncomeModal
         open={incomeOpen}
         onClose={() => setIncomeOpen(false)}
@@ -86,6 +276,25 @@ export default function TransactionsPage() {
         funds={state.funds}
         dispatch={dispatch}
       />
+      
+      <Modal open={addMsgOpen} onClose={() => setAddMsgOpen(false)} title="Add Message Manually">
+        <div className="space-y-4">
+          <p className="text-sm text-txt-secondary leading-relaxed">
+            Paste a bank SMS or notification text to manually run it against your SMS patterns and add it to the message logs.
+          </p>
+          <textarea
+            value={manualText}
+            onChange={(e) => setManualText(e.target.value)}
+            placeholder="Paste raw bank SMS text here (e.g. A/c *3003 debited...)"
+            rows={4}
+            className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary font-mono placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 resize-none"
+          />
+          <div className="flex justify-end gap-3">
+            <Button variant="ghost" onClick={() => setAddMsgOpen(false)}>Cancel</Button>
+            <Button variant="primary" onClick={addManualMessage} disabled={!manualText.trim()}>Add Message</Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
@@ -100,6 +309,7 @@ function TransactionRow({
   dispatch: React.Dispatch<import('../types').AppAction>;
 }) {
   const isIncome = tx.type === 'income';
+  const isExpense = tx.type === 'expense';
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const hasFile = tx.file_id && tx.file_name;
   const isImage = hasFile && /\.(jpg|jpeg|png|gif|webp)$/i.test(tx.file_name!);
@@ -125,11 +335,27 @@ function TransactionRow({
     <Card className="p-4">
       <div className="flex items-center gap-4">
         <div
-          className={`h-10 w-10 rounded-lg flex items-center justify-center text-lg shrink-0 ${
-            isIncome ? 'bg-gain/10 text-gain' : 'bg-loss/10 text-loss'
+          className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${
+            isIncome
+              ? 'bg-gain/10 text-gain border border-gain/20'
+              : isExpense
+              ? 'bg-loss/10 text-loss border border-loss/20'
+              : 'bg-brand/10 text-brand border border-brand/20'
           }`}
         >
-          {isIncome ? '↗' : '↙'}
+          {isIncome ? (
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 19.5 15-15m0 0H8.25m11.25 0v11.25" />
+            </svg>
+          ) : isExpense ? (
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 4.5-15 15m0 0h11.25m-11.25 0V8.25" />
+            </svg>
+          ) : (
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+            </svg>
+          )}
         </div>
 
         <div className="flex-1 min-w-0">
@@ -185,10 +411,10 @@ function TransactionRow({
         <div className="text-right shrink-0">
           <div
             className={`font-mono text-sm font-semibold ${
-              isIncome ? 'text-gain' : 'text-loss'
+              isIncome ? 'text-gain' : isExpense ? 'text-loss' : 'text-txt-secondary'
             }`}
           >
-            {isIncome ? '+' : '-'}
+            {isIncome ? '+' : isExpense ? '-' : ''}
             {formatCurrency(tx.amount)}
           </div>
           {tx.type === 'income' && (

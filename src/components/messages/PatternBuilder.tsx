@@ -4,6 +4,7 @@ import type { MessagePattern, FieldSelector } from '../../types';
 import Card from '../shared/Card';
 import Button from '../shared/Button';
 import Modal from '../shared/Modal';
+import Badge from '../shared/Badge';
 
 const FIELD_OPTIONS = [
   { value: 'amount', label: 'Amount', color: 'bg-green-500/30 text-green-300 border-green-500/40' },
@@ -173,6 +174,18 @@ export default function PatternBuilder() {
 
   const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+  const generalizeStaticText = (text: string) => {
+    let clean = escapeRegex(text);
+    // Replace unselected standard dates (e.g. 09-07-26, 09/07/2026) with generic regex matcher
+    clean = clean.replace(/\b\d{2}[-/]\d{2}[-/]\d{2,4}\b/g, '\\d{2}[-/]\\d{2}[-/]\\d{2,4}');
+    clean = clean.replace(/\b\d{2}[-/][A-Za-z]{3,}[-/]\d{2,4}\b/g, '\\d{2}[-/][A-Za-z]{3,}[-/]\\d{2,4}');
+    
+    // Replace unselected numbers (length >= 4, e.g. UPI refs, help lines, account tokens) with \d+
+    clean = clean.replace(/\b\d{4,}\b/g, '\\d+');
+    
+    return clean;
+  };
+
   const generateRegex = () => {
     if (!draft.example_sms || selections.length === 0) return;
     const sorted = [...selections].sort((a, b) => a.start - b.start);
@@ -182,7 +195,7 @@ export default function PatternBuilder() {
     for (const sel of sorted) {
       if (sel.start < lastEnd) continue;
       const before = draft.example_sms.slice(lastEnd, sel.start);
-      regex += escapeRegex(before);
+      regex += generalizeStaticText(before);
 
       if (['amount', 'balance'].includes(sel.fieldName)) {
         regex += '([\\d,]+\\.?\\d*)';
@@ -198,13 +211,14 @@ export default function PatternBuilder() {
       lastEnd = sel.end;
     }
 
-    regex += escapeRegex(draft.example_sms.slice(lastEnd));
+    regex += generalizeStaticText(draft.example_sms.slice(lastEnd));
     regex = regex.replace(/\s+/g, '\\s+').replace(/^\\s\+/, '').replace(/\\s\+$/, '');
     setDraft({ ...draft, full_regex: regex });
   };
 
   const buildFieldSelectors = (): FieldSelector[] => {
-    return selections.map((sel, idx) => ({
+    const sortedSels = [...selections].sort((a, b) => a.start - b.start);
+    return sortedSels.map((sel, idx) => ({
       field_name: sel.fieldName,
       field_label: FIELD_OPTIONS.find((f) => f.value === sel.fieldName)?.label || sel.fieldName,
       highlight_color: getFieldColor(sel.fieldName),
@@ -265,8 +279,8 @@ export default function PatternBuilder() {
       }
       setTestMatched(true);
       const fields: Record<string, string> = {};
-      const sels = selections;
-      sels.forEach((sel, idx) => {
+      const sortedSels = [...selections].sort((a, b) => a.start - b.start);
+      sortedSels.forEach((sel, idx) => {
         const captured = match[idx + 1]?.trim() || '';
         if (Object.keys(sel.valueMap).length > 0) {
           const lower = captured.toLowerCase();
@@ -489,14 +503,18 @@ export default function PatternBuilder() {
               <p className="text-xs text-red-400 mt-2">No match found</p>
             )}
             {testMatched === true && testResult && (
-              <div className="mt-2 space-y-1 bg-white/[0.03] rounded-lg p-3">
-                <p className="text-xs text-green-400 mb-1">Match found!</p>
-                {Object.entries(testResult).map(([k, v]) => (
-                  <div key={k} className="flex gap-2 text-xs">
-                    <span className="text-txt-secondary">{k}:</span>
-                    <span className="text-txt-primary font-mono">{v}</span>
-                  </div>
-                ))}
+              <div className="mt-2 space-y-2 bg-white/[0.03] rounded-lg p-3 border border-green-500/20">
+                <p className="text-xs text-green-400 font-bold mb-2">Match found!</p>
+                <div className="space-y-2">
+                  {Object.entries(testResult).map(([k, v]) => (
+                    <div key={k} className="flex items-center gap-2 text-xs">
+                      <Badge color={getFieldColor(k)}>
+                        {FIELD_OPTIONS.find((f) => f.value === k)?.label || k}
+                      </Badge>
+                      <span className="text-txt-primary font-mono select-all bg-white/[0.02] px-2 py-0.5 rounded">{v}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
