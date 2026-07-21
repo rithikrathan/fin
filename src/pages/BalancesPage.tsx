@@ -5,7 +5,7 @@ import Card from '../components/shared/Card';
 import AddBalanceModal from '../components/balances/AddBalanceModal';
 import FloatingAddButton from '../components/shared/FloatingAddButton';
 import { formatCurrency } from '../utils/helpers';
-import { Store, Plus, ChevronRight, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
+import { Store, ChevronRight, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
 
 export default function BalancesPage() {
     const { state } = useApp();

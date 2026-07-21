@@ -172,6 +172,9 @@ export interface Settings {
   waterfall_priority: number[];
   theme_mode?: 'system' | 'light' | 'dark';
   animations_enabled?: boolean;
+  show_ghost_deductions?: boolean;
+  impulse_tax_target_fund_id?: number;
+  expensive_want_threshold?: number;
 }
 
 export interface FieldSelector {

@@ -150,6 +150,13 @@ export default function FundsPage() {
                   return s + n.amount;
                 }, 0);
 
+              const showGhost = state.settings.show_ghost_deductions ?? true;
+              const committedDebts = state.debts
+                .filter((d) => d.linked_fund_id === fund.id && d.active)
+                .reduce((s, d) => s + d.emi_amount, 0);
+
+              const totalCommitted = committedNeeds + committedDebts;
+              const availableBalance = Math.max(0, fund.balance - totalCommitted);
               const surplus = fund.balance - committedNeeds;
 
               return (
@@ -158,29 +165,46 @@ export default function FundsPage() {
                   className="p-4 border border-white/[0.06] bg-white/[0.01] rounded-xl hover:border-white/10 transition-colors cursor-pointer"
                   onClick={() => navigate(`/funds/${fund.id}`)}
                 >
-                  <div className="flex items-center gap-2 mb-3">
-                    <div
-                      className="h-2.5 w-2.5 rounded-full"
-                      style={{ backgroundColor: fund.color }}
-                    />
-                    <h4 className="text-xs font-bold text-txt-secondary uppercase tracking-widest">
-                      {fund.name}
-                    </h4>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="h-2.5 w-2.5 rounded-full"
+                        style={{ backgroundColor: fund.color }}
+                      />
+                      <h4 className="text-xs font-bold text-txt-secondary uppercase tracking-widest">
+                        {fund.name}
+                      </h4>
+                    </div>
+                    <span className="text-[10px] font-mono text-txt-secondary">{fund.allocation_pct}%</span>
                   </div>
 
-                  <div className="font-mono text-xl font-bold text-txt-primary truncate">
-                    {formatCurrency(fund.balance)}
-                  </div>
-                  <div className="text-[10px] text-txt-secondary mb-3.5">
-                    {fund.allocation_pct}% split ratio
-                  </div>
+                  {showGhost ? (
+                    <div>
+                      <div className="text-[10px] text-txt-secondary uppercase font-bold tracking-wider">Available Balance</div>
+                      <div className="font-mono text-xl font-bold text-gain truncate">
+                        {formatCurrency(availableBalance)}
+                      </div>
+                      <div className="text-[10px] font-mono text-txt-secondary/60 mt-0.5">
+                        Total: {formatCurrency(fund.balance)}
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="font-mono text-xl font-bold text-txt-primary truncate">
+                        {formatCurrency(fund.balance)}
+                      </div>
+                      <div className="text-[10px] text-txt-secondary mb-3.5">
+                        {fund.allocation_pct}% split ratio
+                      </div>
+                    </div>
+                  )}
 
-                  <div className="space-y-1.5 text-xs border-t border-white/[0.04] pt-3.5">
-                    {committedNeeds > 0 && (
+                  <div className="space-y-1.5 text-xs border-t border-white/[0.04] pt-3 mt-3">
+                    {totalCommitted > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-txt-secondary">Needs</span>
+                        <span className="text-txt-secondary">Committed Obligations</span>
                         <span className="font-mono text-loss">
-                          {formatCurrency(committedNeeds)}
+                          {formatCurrency(totalCommitted)}
                         </span>
                       </div>
                     )}
@@ -191,7 +215,7 @@ export default function FundsPage() {
                       </span>
                     </div>
                     <div className="flex justify-between font-semibold border-t border-white/[0.04] pt-1.5">
-                      <span className="text-txt-primary">Surplus</span>
+                      <span className="text-txt-primary">Net Surplus</span>
                       <span
                         className={`font-mono ${surplus >= 0 ? 'text-gain' : 'text-loss'}`}
                       >

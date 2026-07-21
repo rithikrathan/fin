@@ -15,7 +15,6 @@ const links = [
   { to: '/expenses', label: 'Expenses', icon: ExpensesIcon },
   { to: '/transactions', label: 'Transactions', icon: TransactionsIcon },
   { to: '/funds', label: 'Funds Split', icon: FundsIcon },
-  { to: '/predictions', label: 'Predictions', icon: DashboardIcon },
   { to: '/investments', label: 'Investments', icon: DashboardIcon },
   { to: '/reports', label: 'Reports', icon: ReportsIcon },
   { to: '/settings', label: 'Settings', icon: SettingsIcon },

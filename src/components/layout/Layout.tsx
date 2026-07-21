@@ -22,8 +22,8 @@ const bottomLinks = [
 export default function Layout() {
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [moreOpen, setMoreOpen] = useState(false);
-    const [expensesOpen, setExpensesOpen] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation();
     const [showScrollTop, setShowScrollTop] = useState(false);
     const mainRef = useRef<HTMLElement>(null);
 
@@ -172,7 +172,6 @@ export default function Layout() {
                             { to: '/balances', label: 'Store Balances', icon: TransactionsIcon },
                             { to: '/debts', label: 'Debts & Loans', icon: TransactionsIcon },
                             { to: '/funds', label: 'Funds Split', icon: FundsIcon },
-                            { to: '/predictions', label: 'Predictions', icon: DashboardIcon },
                             { to: '/investments', label: 'Investments', icon: DashboardIcon },
                             { to: '/reports', label: 'Reports', icon: ReportsIcon },
                             { to: '/settings', label: 'Settings', icon: SettingsIcon },
@@ -204,52 +203,13 @@ export default function Layout() {
                     <nav id="bottom-nav" className="lg:hidden sticky bottom-0 left-0 right-0 z-40 bg-surface/90 backdrop-blur-lg border-t border-border-subtle flex items-center justify-around py-2 pb-[calc(10px+env(safe-area-inset-bottom,8px))] px-2 shadow-lg">
                         {bottomLinks.map((link) => {
                             const Icon = link.icon;
-                            if (link.to === '/expenses') {
-                                const isActive = location.pathname === '/expenses';
-                                return (
-                                    <div key={link.to} className="relative">
-                                        <button
-                                            onClick={() => setExpensesOpen(!expensesOpen)}
-                                            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all duration-200 min-w-[64px] min-h-[48px] justify-center active:scale-95 cursor-pointer ${isActive
-                                                ? 'text-brand font-semibold'
-                                                : 'text-txt-secondary hover:text-txt-primary'
-                                                }`}
-                                        >
-                                            <Icon className="w-5.5 h-5.5" />
-                                            <span className="text-[10px] tracking-tight">{link.label}</span>
-                                        </button>
-
-                                        {expensesOpen && (
-                                            <>
-                                                <div className="fixed inset-0 z-40 " onClick={() => setExpensesOpen(false)} />
-                                                <div className="absolute bottom-16 left-0 z-50 bg-surface border border-border-subtle rounded-xl p-1.5 w-40 shadow-2xl flex flex-col gap-1 animate-slide-up-bottom">
-                                                    <button
-                                                        onClick={() => {
-                                                            setExpensesOpen(false);
-                                                            navigate('/expenses?tab=needs');
-                                                        }}
-                                                        className="w-full text-left px-3 py-2.5 rounded-lg text-xs font-semibold text-txt-primary hover:bg-white/[0.04] active:scale-98 transition-all"
-                                                    > Needs </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            setExpensesOpen(false);
-                                                            navigate('/expenses?tab=wants');
-                                                        }}
-                                                        className="w-full text-left px-3 py-2.5 rounded-lg text-xs font-semibold text-txt-primary hover:bg-white/[0.04] active:scale-98 transition-all"
-                                                    > Wants </button>
-                                                </div>
-                                            </>
-                                        )}
-                                    </div>
-                                );
-                            }
                             return (
                                 <NavLink
                                     key={link.to}
-                                    to={link.to}
+                                    to={link.to === '/expenses' ? '/expenses?tab=wants' : link.to}
                                     end={link.to === '/'}
                                     className={({ isActive }) =>
-                                        `flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all duration-200 min-w-[64px] min-h-[48px] justify-center active:scale-95 ${isActive
+                                        `flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all duration-200 min-w-[64px] min-h-[48px] justify-center active:scale-95 cursor-pointer ${isActive
                                             ? 'text-brand font-semibold'
                                             : 'text-txt-secondary hover:text-txt-primary'
                                         }`

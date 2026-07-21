@@ -42,21 +42,15 @@ export default function ExpensesPage() {
 
     return (
         <div className="max-w-5xl mx-auto space-y-8 pb-24">
-            {/* 1. PREMIUM HEADER TAB BAR (No bubble tabs, sliding underline indicator style) */}
-            <div className="relative border-b border-white/[0.06] flex items-center justify-between">
-
-                <div className="flex gap-8 relative">
-
-                    {(['needs', 'wants'] as const).map((tab) => {
-                        const isActive = activeTab === tab;
-                        return (
-                            <h2>Hello</h2>
-                        );
-                    })}
-
+            {/* Page Title Header */}
+            <div className="border-b border-white/[0.06] pb-4 flex items-center justify-between">
+                <div>
+                    <h1 className="text-xl font-bold text-txt-primary capitalize">{activeTab}</h1>
+                    <p className="text-xs text-txt-secondary mt-0.5">
+                        {activeTab === 'needs' ? 'Manage recurring obligations & fixed bills' : 'Wishlist items & purchase prediction tracking'}
+                    </p>
                 </div>
 
-                {/* Desktop Contextual Add Button */}
                 <Button
                     variant="primary"
                     size="sm"
@@ -244,9 +238,9 @@ export default function ExpensesPage() {
                             description="Add something you're saving for."
                         />
                     ) : (
-                        <div className="space-y-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                             {pendingWants.map((w) => (
-                                <WantRow key={w.id} want={w} dispatch={dispatch} />
+                                <WantCard key={w.id} want={w} dispatch={dispatch} />
                             ))}
                         </div>
                     )}
@@ -256,9 +250,9 @@ export default function ExpensesPage() {
                             <h3 className="text-xs uppercase tracking-wider font-bold text-txt-secondary pb-1 border-b border-white/[0.06]">
                                 Purchased ({purchasedWants.length})
                             </h3>
-                            <div className="space-y-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                                 {purchasedWants.map((w) => (
-                                    <WantRow key={w.id} want={w} dispatch={dispatch} />
+                                    <WantCard key={w.id} want={w} dispatch={dispatch} />
                                 ))}
                             </div>
                         </div>
@@ -278,8 +272,8 @@ export default function ExpensesPage() {
     );
 }
 
-// Subcomponents: WantRow
-function WantRow({
+// Subcomponents: WantCard (Restored v1.1.2 Card Style)
+function WantCard({
     want,
     dispatch,
 }: {
@@ -289,111 +283,122 @@ function WantRow({
     const pct = want.target_price > 0 ? (want.current_saved / want.target_price) * 100 : 0;
 
     return (
-        <div
-            className={`py-5 px-3 rounded-xl bg-white/[0.03] flex flex-col md:flex-row md:items-center gap-4 ${want.purchased ? 'opacity-50' : ''
-                }`}
-        >
+        <div className={`rounded-xl border border-white/[0.08] bg-white/[0.02] overflow-hidden flex flex-col justify-between transition-all hover:border-white/20 ${want.purchased ? 'opacity-60' : ''}`}>
             {want.photo_url && (
-                <div className="h-16 w-16 rounded-xl overflow-hidden bg-white/[0.03] shrink-0 border border-white/[0.06]">
+                <div className="h-44 w-full overflow-hidden bg-white/[0.03] border-b border-white/[0.06]">
                     <img src={want.photo_url} alt={want.name} className="w-full h-full object-cover" />
                 </div>
             )}
-
-            <div className="flex-1 min-w-0 space-y-1.5">
-                <div className="flex flex-wrap items-center gap-2">
-                    <h4 className="text-base font-bold text-txt-primary truncate">{want.name}</h4>
-                    <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-txt-secondary">
-                        {want.category}
-                    </span>
-                    <span
-                        className={`text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-white/5 border border-white/10 ${want.priority === 2
-                            ? 'text-red-400 border-red-500/20'
-                            : want.priority === 1
-                                ? 'text-amber-400 border-amber-500/20'
-                                : 'text-blue-400 border-blue-500/20'
-                            }`}
-                    >
-                        {priorityLabels[want.priority]}
-                    </span>
-                </div>
-
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                    <div className="flex-1 max-w-md h-1.5 bg-white/[0.06] rounded-full overflow-hidden shrink-0">
-                        <div className="h-full bg-brand rounded-full transition-all" style={{ width: `${Math.min(pct, 100)}%` }} />
-                    </div>
-                    <div className="flex items-center gap-2 text-xs font-mono text-txt-secondary">
-                        <span className="text-txt-primary font-bold">{formatCurrency(want.current_saved)}</span>
-                        <span>/</span>
-                        <span>{formatCurrency(want.target_price)}</span>
-                        <span className="text-[10px] text-brand font-semibold">({pct.toFixed(0)}%)</span>
-                    </div>
-                </div>
-
-                {want.predicted_date && !want.purchased && (
-                    <div className="text-xs text-txt-secondary flex items-center gap-1">
-                        <Sparkles className="w-3.5 h-3.5 text-brand" />
-                        Expected purchase window: <span className="text-brand font-mono font-semibold">{formatDate(want.predicted_date)}</span> ({want.days_to_buy} days)
-                    </div>
-                )}
-
-                {want.notes && <p className="text-xs text-txt-secondary truncate max-w-2xl">{want.notes}</p>}
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0 md:self-center">
-                {!want.purchased && (
-                    <>
-                        <Button
-                            size="sm"
-                            variant="primary"
-                            onClick={() =>
-                                dispatch({
-                                    type: 'UPDATE_WANT',
-                                    payload: {
-                                        ...want,
-                                        purchased: true,
-                                        purchase_date: new Date().toISOString().split('T')[0]
-                                    }
-                                })
-                            }
+            <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                <div className="space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                        <h4 className="text-base font-bold text-txt-primary truncate">{want.name}</h4>
+                        <span
+                            className={`text-[9px] uppercase font-bold tracking-wider px-2 py-0.5 rounded shrink-0 border border-white/10 ${want.priority === 2
+                                ? 'text-red-400 border-red-500/20 bg-red-500/10'
+                                : want.priority === 1
+                                    ? 'text-amber-400 border-amber-500/20 bg-amber-500/10'
+                                    : 'text-blue-400 border-blue-500/20 bg-blue-500/10'
+                                }`}
                         >
-                            Purchase
-                        </Button>
-                        {want.purchase_link && (
-                            <a
-                                href={want.purchase_link}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="px-3 py-1.5 rounded-lg border border-white/20 text-xs font-semibold text-txt-primary hover:bg-white/[0.04] transition-all text-center flex items-center gap-1"
-                            >
-                                Buy <ExternalLink className="w-3 h-3" />
-                            </a>
-                        )}
-                        <Button
-                            size="sm"
-                            variant="outlined"
-                            onClick={() => dispatch({ type: 'REMOVE_WANT', payload: want.id })}
-                            className="hover:text-red-400 hover:border-red-500/20"
-                        >
-                            ✕
-                        </Button>
-                    </>
-                )}
-                {want.purchased && (
-                    <div className="flex items-center gap-3">
-                        <span className="text-xs text-gain font-mono flex items-center gap-1">
-                            <Check className="w-3.5 h-3.5" />
-                            {want.purchase_date && formatDate(want.purchase_date)}
+                            {priorityLabels[want.priority]}
                         </span>
-                        <Button
-                            size="sm"
-                            variant="outlined"
-                            onClick={() => dispatch({ type: 'REMOVE_WANT', payload: want.id })}
-                            className="hover:text-red-400 hover:border-red-500/20"
-                        >
-                            Remove
-                        </Button>
                     </div>
-                )}
+
+                    <div className="text-xs text-txt-secondary uppercase tracking-wider font-semibold">
+                        {want.category}
+                    </div>
+
+                    {want.notes && <p className="text-xs text-txt-secondary/80 line-clamp-2">{want.notes}</p>}
+                </div>
+
+                <div className="space-y-3 pt-2">
+                    <div className="space-y-1.5">
+                        <div className="flex justify-between items-center text-xs font-mono">
+                            <span className="text-txt-secondary">Saved / Target</span>
+                            <span className="text-txt-primary font-bold">
+                                {formatCurrency(want.current_saved)} / {formatCurrency(want.target_price)}
+                            </span>
+                        </div>
+                        <div className="h-2 w-full bg-white/[0.06] rounded-full overflow-hidden">
+                            <div
+                                className="h-full bg-brand rounded-full transition-all"
+                                style={{ width: `${Math.min(pct, 100)}%` }}
+                            />
+                        </div>
+                        <div className="text-right text-[10px] font-mono text-brand font-bold">
+                            {pct.toFixed(0)}% Saved
+                        </div>
+                    </div>
+
+                    {want.predicted_date && !want.purchased && (
+                        <div className="text-xs text-txt-secondary flex items-center gap-1.5 pt-1 border-t border-white/[0.04]">
+                            <Sparkles className="w-3.5 h-3.5 text-brand shrink-0" />
+                            <span>
+                                Target: <span className="text-brand font-mono font-semibold">{formatDate(want.predicted_date)}</span> ({want.days_to_buy} days)
+                            </span>
+                        </div>
+                    )}
+
+                    <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/[0.06]">
+                        {!want.purchased && (
+                            <>
+                                <Button
+                                    size="sm"
+                                    variant="primary"
+                                    onClick={() =>
+                                        dispatch({
+                                            type: 'UPDATE_WANT',
+                                            payload: {
+                                                ...want,
+                                                purchased: true,
+                                                purchase_date: new Date().toISOString().split('T')[0]
+                                            }
+                                        })
+                                    }
+                                    className="flex-1 justify-center"
+                                >
+                                    Purchase
+                                </Button>
+                                {want.purchase_link && (
+                                    <a
+                                        href={want.purchase_link}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="px-3 py-1.5 rounded-lg border border-white/20 text-xs font-semibold text-txt-primary hover:bg-white/[0.04] transition-all text-center flex items-center gap-1 shrink-0"
+                                    >
+                                        Buy <ExternalLink className="w-3 h-3" />
+                                    </a>
+                                )}
+                                <Button
+                                    size="sm"
+                                    variant="outlined"
+                                    onClick={() => dispatch({ type: 'REMOVE_WANT', payload: want.id })}
+                                    className="hover:text-red-400 hover:border-red-500/20"
+                                >
+                                    ✕
+                                </Button>
+                            </>
+                        )}
+
+                        {want.purchased && (
+                            <div className="flex items-center justify-between w-full">
+                                <span className="text-xs text-gain font-mono flex items-center gap-1">
+                                    <Check className="w-3.5 h-3.5" />
+                                    Bought {want.purchase_date && formatDate(want.purchase_date)}
+                                </span>
+                                <Button
+                                    size="sm"
+                                    variant="outlined"
+                                    onClick={() => dispatch({ type: 'REMOVE_WANT', payload: want.id })}
+                                    className="hover:text-red-400 hover:border-red-500/20"
+                                >
+                                    Remove
+                                </Button>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
         </div>
     );

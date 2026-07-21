@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import Card from '../components/shared/Card';

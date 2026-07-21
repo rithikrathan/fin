@@ -125,32 +125,78 @@ export default function SettingsPage() {
                 </div>
             </div>
 
-            {/* UI Animations Toggle */}
+            {/* UI Animations & Friction Controls */}
             <div className="space-y-4">
                 <div className="border-b border-white/[0.06] pb-2">
                     <h3 className="text-sm uppercase tracking-wider font-bold text-txt-secondary">
-                        Interface Motion
+                        Interface & Ghost Balances
                     </h3>
                 </div>
-                <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/10">
-                    <div>
-                        <h4 className="text-sm font-bold text-txt-primary">Enable UI Animations</h4>
-                        <p className="text-xs text-txt-secondary mt-0.5">
-                            Use premium slide and scale transitions. Disable for faster performance.
-                        </p>
+                <div className="space-y-3">
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/10">
+                        <div>
+                            <h4 className="text-sm font-bold text-txt-primary">Ghost Balance Deductions</h4>
+                            <p className="text-xs text-txt-secondary mt-0.5">
+                                Display Available Balance (minus committed bills & debt EMIs) with Total Balance in small font.
+                            </p>
+                        </div>
+                        <input
+                            type="checkbox"
+                            checked={state.settings.show_ghost_deductions !== false}
+                            onChange={(e) => {
+                                dispatch({
+                                    type: 'UPDATE_SETTINGS',
+                                    payload: { show_ghost_deductions: e.target.checked },
+                                });
+                                showToast(e.target.checked ? 'Ghost deductions enabled' : 'Ghost deductions disabled');
+                            }}
+                            className="h-5 w-5 accent-brand cursor-pointer"
+                        />
                     </div>
-                    <input
-                        type="checkbox"
-                        checked={state.settings.animations_enabled !== false}
-                        onChange={(e) => {
-                            dispatch({
-                                type: 'UPDATE_SETTINGS',
-                                payload: { animations_enabled: e.target.checked },
-                            });
-                            showToast(e.target.checked ? 'Animations enabled' : 'Animations disabled');
-                        }}
-                        className="h-5 w-5 accent-brand cursor-pointer"
-                    />
+
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/10">
+                        <div>
+                            <h4 className="text-sm font-bold text-txt-primary">Income Allocation Mode</h4>
+                            <p className="text-xs text-txt-secondary mt-0.5">
+                                Waterfall mode fills Needs baseline first before splitting surplus into Savings & Wants.
+                            </p>
+                        </div>
+                        <select
+                            value={state.settings.allocation_mode || 'blind'}
+                            onChange={(e) => {
+                                dispatch({
+                                    type: 'UPDATE_SETTINGS',
+                                    payload: { allocation_mode: e.target.value as 'blind' | 'waterfall' },
+                                });
+                                showToast(`Allocation mode: ${e.target.value}`);
+                            }}
+                            className="bg-[#141414] border border-white/20 rounded-lg px-3 py-1.5 text-xs text-txt-primary font-bold outline-none focus:border-brand"
+                        >
+                            <option value="blind">Pro-Rata (Default)</option>
+                            <option value="waterfall">Waterfall (Needs First)</option>
+                        </select>
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/10">
+                        <div>
+                            <h4 className="text-sm font-bold text-txt-primary">Enable UI Animations</h4>
+                            <p className="text-xs text-txt-secondary mt-0.5">
+                                Use premium slide and scale transitions. Disable for faster performance.
+                            </p>
+                        </div>
+                        <input
+                            type="checkbox"
+                            checked={state.settings.animations_enabled !== false}
+                            onChange={(e) => {
+                                dispatch({
+                                    type: 'UPDATE_SETTINGS',
+                                    payload: { animations_enabled: e.target.checked },
+                                });
+                                showToast(e.target.checked ? 'Animations enabled' : 'Animations disabled');
+                            }}
+                            className="h-5 w-5 accent-brand cursor-pointer"
+                        />
+                    </div>
                 </div>
             </div>
 

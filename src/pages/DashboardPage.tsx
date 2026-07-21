@@ -4,6 +4,7 @@ import { useApp } from '../context/AppContext';
 import { formatCurrency, formatDate } from '../utils/helpers';
 import Card from '../components/shared/Card';
 import { HomeIcon } from '../components/shared/Icons';
+import PredictionsContent from '../components/predictions/PredictionsContent';
 import {
     XAxis,
     YAxis,
@@ -434,6 +435,14 @@ export default function DashboardPage() {
                         </div>
                     )}
                 </div>
+            </div>
+
+            {/* Financial Predictions & Forecasting Models */}
+            <div className="space-y-4 pt-6 border-t border-white/[0.06]">
+                <h3 className="text-xs uppercase tracking-wider font-bold text-txt-secondary">
+                    Financial Predictions & Forecasting Models
+                </h3>
+                <PredictionsContent idPrefix="dash" />
             </div>
         </div>
     );
