@@ -19,6 +19,8 @@ const routeConfig: Record<string, { title: string; icon: React.ComponentType<{ c
     '/funds/manage': { title: 'Manage Funds', icon: FundsIcon },
     '/investments': { title: 'Investments', icon: DashboardIcon },
     '/balances': { title: 'Store Balances', icon: TransactionsIcon },
+    '/debts': { title: 'Debts & Loan Tracker', icon: TransactionsIcon },
+    '/predictions': { title: 'Predictions & Projections', icon: DashboardIcon },
     '/reports': { title: 'Reports', icon: ReportsIcon },
     '/settings': { title: 'Settings', icon: SettingsIcon },
 };

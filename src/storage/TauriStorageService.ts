@@ -1,5 +1,5 @@
 import Database from '@tauri-apps/plugin-sql';
-import type { Fund, Milestone, FundSnapshot, Transaction, Want, Need, Investment, Debt, SavedReport, Settings, IncomeTransaction, ExpenseTransaction, MessagePattern, SmsLog, DetectedTransaction } from '../types/index.ts';
+import type { Fund, Milestone, FundSnapshot, Transaction, Want, Need, Investment, Debt, SavedReport, Settings, IncomeTransaction, ExpenseTransaction, MessagePattern, SmsLog, DetectedTransaction, BalanceAccount, BalanceStatus, BalanceTransaction, BalanceTxType, BalanceLineItem } from '../types/index.ts';
 import { initialState } from '../context/initialState.ts';
 import type { StorageService, StorageState } from './StorageService.ts';
 import schemaSql from './schema.sql?raw';
@@ -252,6 +252,39 @@ function parseDetectedTx(r: Record<string, unknown>): DetectedTransaction {
   };
 }
 
+function parseBalanceAccount(r: Record<string, unknown>): BalanceAccount {
+  return {
+    id: String(r.id),
+    title: String(r.title),
+    total_due: rowToNumber(r.total_due),
+    status: String(r.status || 'Pending') as BalanceStatus,
+    created_at: String(r.created_at),
+  };
+}
+
+function parseBalanceTransaction(r: Record<string, unknown>): BalanceTransaction {
+  return {
+    id: String(r.id),
+    account_id: String(r.account_id),
+    type: String(r.type) as BalanceTxType,
+    transaction_total: rowToNumber(r.transaction_total),
+    date: String(r.date),
+    reference_number: rowToOptionalString(r.reference_number) || undefined,
+    notes: rowToOptionalString(r.notes) || undefined,
+  };
+}
+
+function parseBalanceLineItem(r: Record<string, unknown>): BalanceLineItem {
+  return {
+    id: String(r.id),
+    transaction_id: String(r.transaction_id),
+    item_name: String(r.item_name),
+    count_qty: rowToNumber(r.count_qty),
+    unit_cost: rowToNumber(r.unit_cost),
+    line_total: rowToNumber(r.line_total),
+  };
+}
+
 export class TauriStorageService implements StorageService {
   private initialized = false;
   private savePromise: Promise<void> = Promise.resolve();
@@ -266,7 +299,24 @@ export class TauriStorageService implements StorageService {
     await this.init();
     const d = await getDb();
 
-    const [fundRows, snapshotRows, milestoneRows, txRows, wantRows, needRows, invRows, debtRows, settingRows, reportRows, patternRows, smsRows, detRows] = await Promise.all([
+    const [
+      fundRows,
+      snapshotRows,
+      milestoneRows,
+      txRows,
+      wantRows,
+      needRows,
+      invRows,
+      debtRows,
+      settingRows,
+      reportRows,
+      patternRows,
+      smsRows,
+      detRows,
+      balAccRows,
+      balTxRows,
+      balLiRows,
+    ] = await Promise.all([
       d.select<Fund[]>('SELECT * FROM funds'),
       d.select<FundSnapshot[]>('SELECT * FROM fund_snapshots'),
       d.select<Milestone[]>('SELECT * FROM milestones'),
@@ -280,6 +330,9 @@ export class TauriStorageService implements StorageService {
       d.select<Record<string, unknown>[]>('SELECT * FROM message_patterns'),
       d.select<Record<string, unknown>[]>('SELECT * FROM sms_logs'),
       d.select<Record<string, unknown>[]>('SELECT * FROM detected_transactions'),
+      d.select<Record<string, unknown>[]>('SELECT * FROM balance_accounts'),
+      d.select<Record<string, unknown>[]>('SELECT * FROM balance_transactions'),
+      d.select<Record<string, unknown>[]>('SELECT * FROM balance_line_items'),
     ]);
 
     const settings: Settings = { ...initialState.settings };
@@ -305,6 +358,9 @@ export class TauriStorageService implements StorageService {
       message_patterns: patternRows.map(parseMessagePattern),
       sms_logs: smsRows.map(parseSmsLog),
       detected_transactions: detRows.map(parseDetectedTx),
+      balance_accounts: balAccRows.map(parseBalanceAccount),
+      balance_transactions: balTxRows.map(parseBalanceTransaction),
+      balance_line_items: balLiRows.map(parseBalanceLineItem),
     };
 
     if (state.funds.length === 0) return initialState;
@@ -433,6 +489,30 @@ export class TauriStorageService implements StorageService {
           await d.execute(
             'INSERT INTO detected_transactions (id, sms_log_id, amount, tx_type, account_number, bank_name, merchant, date, balance_after, fund_id, category, notes, status, created_transaction_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)',
             [t.id, t.sms_log_id, t.amount, t.type, t.account_number, t.bank_name, t.merchant, t.date, t.balance_after, t.fund_id, t.category, t.notes, t.status, t.created_transaction_id]
+          );
+        }
+
+        await d.execute('DELETE FROM balance_accounts');
+        for (const b of state.balance_accounts || []) {
+          await d.execute(
+            'INSERT INTO balance_accounts (id, title, total_due, status, created_at) VALUES ($1, $2, $3, $4, $5)',
+            [b.id, b.title, b.total_due, b.status, b.created_at]
+          );
+        }
+
+        await d.execute('DELETE FROM balance_transactions');
+        for (const bt of state.balance_transactions || []) {
+          await d.execute(
+            'INSERT INTO balance_transactions (id, account_id, type, transaction_total, date, reference_number, notes) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+            [bt.id, bt.account_id, bt.type, bt.transaction_total, bt.date, bt.reference_number || null, bt.notes || null]
+          );
+        }
+
+        await d.execute('DELETE FROM balance_line_items');
+        for (const li of state.balance_line_items || []) {
+          await d.execute(
+            'INSERT INTO balance_line_items (id, transaction_id, item_name, count_qty, unit_cost, line_total) VALUES ($1, $2, $3, $4, $5, $6)',
+            [li.id, li.transaction_id, li.item_name, li.count_qty, li.unit_cost, li.line_total]
           );
         }
 

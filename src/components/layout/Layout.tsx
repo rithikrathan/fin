@@ -24,7 +24,30 @@ export default function Layout() {
     const [moreOpen, setMoreOpen] = useState(false);
     const [expensesOpen, setExpensesOpen] = useState(false);
     const navigate = useNavigate();
-    const location = useLocation();
+    const [showScrollTop, setShowScrollTop] = useState(false);
+    const mainRef = useRef<HTMLElement>(null);
+
+    useEffect(() => {
+        const mainEl = mainRef.current;
+        if (!mainEl) return;
+
+        const handleScroll = () => {
+            if (mainEl.scrollTop > 200) {
+                setShowScrollTop(true);
+            } else {
+                setShowScrollTop(false);
+            }
+        };
+
+        mainEl.addEventListener('scroll', handleScroll, { passive: true });
+        return () => mainEl.removeEventListener('scroll', handleScroll);
+    }, [location.pathname]);
+
+    const scrollToTop = () => {
+        if (mainRef.current) {
+            mainRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
 
     const touchStartY = useRef(0);
     const touchCurrentY = useRef(0);
@@ -83,15 +106,48 @@ export default function Layout() {
         };
     }, [navigate, location.pathname]);
 
+    useEffect(() => {
+        if (moreOpen) {
+            document.body.classList.add('modal-open');
+        } else {
+            document.body.classList.remove('modal-open');
+        }
+        return () => {
+            document.body.classList.remove('modal-open');
+        };
+    }, [moreOpen]);
+
 
     return (
         <div className="flex h-screen bg-base overflow-hidden select-none">
             <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
             <div className="flex flex-col flex-1 min-w-0">
                 <Header />
-                <main key={location.pathname} className="flex-1 overflow-y-auto p-4 sm:p-6 pb-24 lg:pb-6 page-enter">
+                <main ref={mainRef} key={location.pathname} className="flex-1 overflow-y-auto p-4 sm:p-6 pb-24 lg:pb-6 page-enter">
                     <Outlet />
                 </main>
+
+                {/* Global Floating Scroll-To-Top Button (only on pages without dedicated FABs) */}
+                {(() => {
+                    const fabRoutes = ['/transactions', '/expenses', '/balances', '/funds/manage', '/investments'];
+                    const hasPageFab = fabRoutes.some((route) => location.pathname.startsWith(route));
+                    if (hasPageFab) return null;
+
+                    return (
+                        <button
+                            onClick={scrollToTop}
+                            aria-label="Scroll to top"
+                            className={`fixed right-4 bottom-20 lg:bottom-6 z-30 w-10 h-10 rounded-full bg-[#191919]/90 border border-white/15 text-txt-primary flex items-center justify-center shadow-xl hover:bg-white/10 active:scale-90 transition-all duration-300 ease-out cursor-pointer backdrop-blur-md ${showScrollTop
+                                    ? 'opacity-100 translate-y-0 scale-100'
+                                    : 'opacity-0 translate-y-6 scale-75 pointer-events-none'
+                                }`}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+                            </svg>
+                        </button>
+                    );
+                })()}
 
                 {/* Backdrop for Mobile Bottom Drawer */}
                 {moreOpen && (
@@ -114,8 +170,9 @@ export default function Layout() {
                     <div className="grid grid-cols-2 gap-3">
                         {[
                             { to: '/balances', label: 'Store Balances', icon: TransactionsIcon },
+                            { to: '/debts', label: 'Debts & Loans', icon: TransactionsIcon },
                             { to: '/funds', label: 'Funds Split', icon: FundsIcon },
-                            { to: '/funds/manage', label: 'Manage Funds', icon: FundsIcon },
+                            { to: '/predictions', label: 'Predictions', icon: DashboardIcon },
                             { to: '/investments', label: 'Investments', icon: DashboardIcon },
                             { to: '/reports', label: 'Reports', icon: ReportsIcon },
                             { to: '/settings', label: 'Settings', icon: SettingsIcon },

@@ -125,6 +125,35 @@ export default function SettingsPage() {
                 </div>
             </div>
 
+            {/* UI Animations Toggle */}
+            <div className="space-y-4">
+                <div className="border-b border-white/[0.06] pb-2">
+                    <h3 className="text-sm uppercase tracking-wider font-bold text-txt-secondary">
+                        Interface Motion
+                    </h3>
+                </div>
+                <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/10">
+                    <div>
+                        <h4 className="text-sm font-bold text-txt-primary">Enable UI Animations</h4>
+                        <p className="text-xs text-txt-secondary mt-0.5">
+                            Use premium slide and scale transitions. Disable for faster performance.
+                        </p>
+                    </div>
+                    <input
+                        type="checkbox"
+                        checked={state.settings.animations_enabled !== false}
+                        onChange={(e) => {
+                            dispatch({
+                                type: 'UPDATE_SETTINGS',
+                                payload: { animations_enabled: e.target.checked },
+                            });
+                            showToast(e.target.checked ? 'Animations enabled' : 'Animations disabled');
+                        }}
+                        className="h-5 w-5 accent-brand cursor-pointer"
+                    />
+                </div>
+            </div>
+
             {/* Predictions */}
             <div className="space-y-4">
                 <div className="border-b border-white/[0.06] pb-2">

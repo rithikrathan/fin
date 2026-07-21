@@ -132,9 +132,20 @@ jobs:
       - name: Generate app icons
         run: npx tauri icon src-tauri/icons/icon.png
 
+      - name: Setup Android signing
+        run: |
+          KEYSTORE_PATH="src-tauri/gen/android/app/release.jks"
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > "$KEYSTORE_PATH"
+          cat > src-tauri/gen/android/key.properties <<EOF
+          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword=${{ secrets.KEY_PASSWORD }}
+          keyAlias=${{ secrets.KEY_ALIAS }}
+          storeFile=$KEYSTORE_PATH
+          EOF
+
       - name: Build APK
         id: android-build
-        run: npx tauri android build --target aarch64 --debug --apk --ci
+        run: npx tauri android build --target aarch64 --apk --ci
         continue-on-error: true
         env:
           NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
@@ -143,7 +154,7 @@ jobs:
         if: steps.android-build.outcome == 'failure'
         run: |
           chmod +x src-tauri/gen/android/gradlew
-          src-tauri/gen/android/gradlew --project-dir src-tauri/gen/android assembleDebug --stacktrace 2>&1 | grep -A 30 "What went wrong" || tail -100
+          src-tauri/gen/android/gradlew --project-dir src-tauri/gen/android assembleRelease --stacktrace 2>&1 | grep -A 30 "What went wrong" || tail -100
         env:
           NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/27.0.12077973
 

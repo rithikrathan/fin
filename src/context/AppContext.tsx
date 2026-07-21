@@ -320,6 +320,167 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
     }
 
+    case 'ADD_BALANCE_ACCOUNT': {
+      const needsFund = state.funds.find((f) => f.name.toLowerCase() === 'needs') || state.funds[0];
+      const storeNeed: import('../types').Need = {
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        name: action.payload.title,
+        amount: action.payload.total_due,
+        category: 'Store Balance',
+        recurring: false,
+        frequency: null,
+        due_date: null,
+        fund_id: needsFund ? needsFund.id : 1,
+        fund_name: needsFund ? needsFund.name : 'needs',
+        autopay: false,
+        notes: `Store balance tab for ${action.payload.title}`,
+        active: true,
+        reapproval_required: false,
+        balance_account_id: action.payload.id,
+      };
+
+      return {
+        ...state,
+        balance_accounts: [action.payload, ...(state.balance_accounts || [])],
+        needs: [...(state.needs || []), storeNeed],
+      };
+    }
+
+    case 'UPDATE_BALANCE_ACCOUNT': {
+      const updatedNeeds = (state.needs || []).map((n) => {
+        if (n.balance_account_id === action.payload.id) {
+          return { ...n, name: action.payload.title, amount: action.payload.total_due };
+        }
+        return n;
+      });
+      return {
+        ...state,
+        balance_accounts: (state.balance_accounts || []).map((b) => (b.id === action.payload.id ? action.payload : b)),
+        needs: updatedNeeds,
+      };
+    }
+
+    case 'REMOVE_BALANCE_ACCOUNT':
+      return {
+        ...state,
+        balance_accounts: (state.balance_accounts || []).filter((b) => b.id !== action.payload),
+        balance_transactions: (state.balance_transactions || []).filter((tx) => tx.account_id !== action.payload),
+        balance_line_items: (state.balance_line_items || []).filter((li) => {
+          const tx = (state.balance_transactions || []).find((t) => t.id === li.transaction_id);
+          return tx && tx.account_id !== action.payload;
+        }),
+        needs: (state.needs || []).filter((n) => n.balance_account_id !== action.payload),
+      };
+
+    case 'RESET_BALANCE_ACCOUNT': {
+      const accountId = action.payload;
+      const updatedAccounts = (state.balance_accounts || []).map((acc) => {
+        if (acc.id === accountId) {
+          return { ...acc, total_due: 0, status: 'Paid' as const };
+        }
+        return acc;
+      });
+      const updatedNeeds = (state.needs || []).map((n) => {
+        if (n.balance_account_id === accountId) {
+          return { ...n, amount: 0 };
+        }
+        return n;
+      });
+      return {
+        ...state,
+        balance_accounts: updatedAccounts,
+        balance_transactions: (state.balance_transactions || []).filter((tx) => tx.account_id !== accountId),
+        balance_line_items: (state.balance_line_items || []).filter((li) => {
+          const tx = (state.balance_transactions || []).find((t) => t.id === li.transaction_id);
+          return tx && tx.account_id !== accountId;
+        }),
+        needs: updatedNeeds,
+      };
+    }
+
+    case 'ADD_BALANCE_TRANSACTION': {
+      const { transaction: tx, line_items = [] } = action.payload;
+      const allTx = [tx, ...(state.balance_transactions || [])];
+      const allItems = [...line_items, ...(state.balance_line_items || [])];
+
+      // Auto-tally account total_due and status
+      const accountTx = allTx.filter((t) => t.account_id === tx.account_id);
+      const additionTotal = accountTx
+        .filter((t) => t.type === 'Addition')
+        .reduce((sum, t) => sum + t.transaction_total, 0);
+      const subtractionTotal = accountTx
+        .filter((t) => t.type === 'Subtraction')
+        .reduce((sum, t) => sum + t.transaction_total, 0);
+
+      const netDue = Math.max(0, round2(additionTotal - subtractionTotal));
+      let status: 'Pending' | 'Partially Paid' | 'Paid' = 'Pending';
+      if (netDue === 0 && additionTotal > 0) status = 'Paid';
+      else if (netDue > 0 && subtractionTotal > 0) status = 'Partially Paid';
+
+      const updatedAccounts = (state.balance_accounts || []).map((acc) => {
+        if (acc.id === tx.account_id) {
+          return { ...acc, total_due: netDue, status };
+        }
+        return acc;
+      });
+
+      const updatedNeeds = (state.needs || []).map((n) => {
+        if (n.balance_account_id === tx.account_id) {
+          return { ...n, amount: netDue };
+        }
+        return n;
+      });
+
+      return {
+        ...state,
+        balance_accounts: updatedAccounts,
+        balance_transactions: allTx,
+        balance_line_items: allItems,
+        needs: updatedNeeds,
+      };
+    }
+
+    case 'REMOVE_BALANCE_TRANSACTION': {
+      const { transaction_id, account_id } = action.payload;
+      const remainingTx = (state.balance_transactions || []).filter((t) => t.id !== transaction_id);
+      const remainingItems = (state.balance_line_items || []).filter((li) => li.transaction_id !== transaction_id);
+
+      const accountTx = remainingTx.filter((t) => t.account_id === account_id);
+      const additionTotal = accountTx
+        .filter((t) => t.type === 'Addition')
+        .reduce((sum, t) => sum + t.transaction_total, 0);
+      const subtractionTotal = accountTx
+        .filter((t) => t.type === 'Subtraction')
+        .reduce((sum, t) => sum + t.transaction_total, 0);
+
+      const netDue = Math.max(0, round2(additionTotal - subtractionTotal));
+      let status: 'Pending' | 'Partially Paid' | 'Paid' = 'Pending';
+      if (netDue === 0 && additionTotal > 0) status = 'Paid';
+      else if (netDue > 0 && subtractionTotal > 0) status = 'Partially Paid';
+
+      const updatedAccounts = (state.balance_accounts || []).map((acc) => {
+        if (acc.id === account_id) {
+          return { ...acc, total_due: netDue, status };
+        }
+        return acc;
+      });
+
+      const updatedNeeds = (state.needs || []).map((n) => {
+        if (n.balance_account_id === account_id) {
+          return { ...n, amount: netDue };
+        }
+        return n;
+      });
+
+      return {
+        ...state,
+        balance_accounts: updatedAccounts,
+        balance_transactions: remainingTx,
+        balance_line_items: remainingItems,
+        needs: updatedNeeds,
+      };
+    }
+
     case 'SAVE_REPORT':
       return { ...state, reports: [action.payload, ...state.reports] };
     case 'REMOVE_REPORT':

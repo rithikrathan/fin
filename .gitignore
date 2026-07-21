@@ -60,3 +60,8 @@ src-tauri/Frameworks/
 src-tauri/**/*.msi
 src-tauri/**/*.exe
 
+# Android signing
+*.jks
+*.keystore
+key.properties
+

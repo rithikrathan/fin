@@ -6,9 +6,8 @@ export function round2(n: number): number {
 
 export function formatCurrency(amount: number, currency = '₹'): string {
   const rounded = round2(amount);
-  const isWhole = rounded === Math.floor(rounded);
   return `${currency}${rounded.toLocaleString('en-IN', {
-    minimumFractionDigits: isWhole ? 0 : 2,
+    minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })}`;
 }

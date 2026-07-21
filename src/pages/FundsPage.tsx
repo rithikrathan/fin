@@ -446,7 +446,7 @@ function ConfigModal({
                   )}
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="relative">
+                  <div className="relative flex items-center">
                     <input
                       type="number"
                       min="0"
@@ -454,9 +454,9 @@ function ConfigModal({
                       step="0.1"
                       value={pctValues[f.id] || '0'}
                       onChange={(e) => handleSliderChange(f.id, e.target.value)}
-                      className="w-20 bg-transparent border-b border-white/20 focus:border-brand rounded-none px-0 py-1 text-right font-mono text-sm text-txt-primary outline-none transition-colors"
+                      className="w-20 bg-transparent border-b border-white/20 focus:border-brand rounded-none pr-4.5 py-1 text-right font-mono text-sm text-txt-primary outline-none transition-colors"
                     />
-                    <span className="absolute right-0 top-1/2 -translate-y-1/2 text-txt-secondary text-xs pointer-events-none">%</span>
+                    <span className="absolute right-0 top-1/2 -translate-y-1/2 text-txt-secondary text-xs pointer-events-none select-none">%</span>
                   </div>
                   <button
                     onClick={() => toggleLock(f.id)}

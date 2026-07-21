@@ -173,3 +173,32 @@ CREATE TABLE IF NOT EXISTS detected_transactions (
   status TEXT NOT NULL DEFAULT 'detected',
   created_transaction_id INTEGER
 );
+
+CREATE TABLE IF NOT EXISTS balance_accounts (
+  id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  total_due REAL NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'Pending',
+  created_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS balance_transactions (
+  id TEXT PRIMARY KEY,
+  account_id TEXT NOT NULL,
+  type TEXT NOT NULL,
+  transaction_total REAL NOT NULL,
+  date TEXT NOT NULL,
+  reference_number TEXT,
+  notes TEXT,
+  FOREIGN KEY (account_id) REFERENCES balance_accounts(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS balance_line_items (
+  id TEXT PRIMARY KEY,
+  transaction_id TEXT NOT NULL,
+  item_name TEXT NOT NULL,
+  count_qty INTEGER NOT NULL DEFAULT 1,
+  unit_cost REAL NOT NULL DEFAULT 0,
+  line_total REAL NOT NULL DEFAULT 0,
+  FOREIGN KEY (transaction_id) REFERENCES balance_transactions(id) ON DELETE CASCADE
+);

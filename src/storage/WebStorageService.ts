@@ -59,6 +59,10 @@ function normalizeState(parsed: Record<string, unknown>): AppState {
     }));
   }
 
+  if (!state.balance_accounts) state.balance_accounts = [];
+  if (!state.balance_transactions) state.balance_transactions = [];
+  if (!state.balance_line_items) state.balance_line_items = [];
+
   if (!state.settings) state.settings = initialState.settings;
   state.settings.cooling_off_hours = state.settings.cooling_off_hours ?? 48;
   state.settings.waterfall_priority = state.settings.waterfall_priority ?? [];

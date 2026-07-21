@@ -17,35 +17,217 @@
   --shadow-glow-lg: 0 0 40px rgba(255, 42, 42, 0.25);
 }
 
+/* --- COMPREHENSIVE LIGHT MODE COLOR SYSTEM --- */
 html.light {
-  --color-base: #F8F9FA;
-  --color-surface: rgba(255, 255, 255, 0.85);
-  --color-brand: #E11D48;
-  --color-gain: #16A34A;
-  --color-loss: #EA580C;
-  --color-txt-primary: #0F172A;
-  --color-txt-secondary: #64748B;
+  --color-base: #F5ECEC; /* Muted rose-tinted warm background */
+  --color-surface: #FFFFFF; /* Pure white container cards */
+  --color-brand: #DC2626; /* Crimson red brand accent */
+  --color-gain: #047857; /* Deep green */
+  --color-loss: #C2410C; /* Deep orange */
+  --color-txt-primary: #0F172A; /* Slate 900 for text */
+  --color-txt-secondary: #475569; /* Slate 700 for descriptions */
   --color-border-subtle: rgba(0, 0, 0, 0.08);
+
+  --shadow-glow: 0 4px 20px rgba(220, 38, 38, 0.12);
+  --shadow-glow-lg: 0 8px 30px rgba(220, 38, 38, 0.08);
 }
 
 html.light body {
-  background-color: #F8F9FA;
+  background-color: #F5ECEC;
   color: #0F172A;
 }
 
-html.light select option {
-  background-color: #FFFFFF;
-  color: #0F172A;
+/* Light mode card distinction */
+html.light .bg-surface {
+  background-color: #FFFFFF !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.02) !important;
 }
 
+/* Hover/active states for clickable list items in light mode */
+html.light .hover\:bg-white\/\[0\.03\]:hover,
+html.light .hover\:bg-white\/\[0\.04\]:hover,
+html.light .hover\:bg-white\/\[0\.06\]:hover {
+  background-color: rgba(0, 0, 0, 0.02) !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+}
+
+/* Recharts Axes, Ticks, and Grid Line overrides */
+html.light .recharts-cartesian-grid-horizontal line,
+html.light .recharts-cartesian-grid-vertical line {
+  stroke: rgba(0, 0, 0, 0.06) !important;
+}
+html.light .recharts-cartesian-axis-line,
+html.light .recharts-cartesian-axis-tick-line {
+  stroke: rgba(0, 0, 0, 0.1) !important;
+}
+html.light .recharts-text {
+  fill: #475569 !important;
+  font-weight: 500;
+}
+html.light .recharts-legend-item-text {
+  color: #475569 !important;
+}
+html.light .recharts-tooltip-cursor {
+  stroke: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Recharts Tooltip container styling */
+html.light .recharts-default-tooltip,
+html.light .recharts-tooltip-wrapper > div {
+  background-color: #FFFFFF !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  color: #0F172A !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+}
+html.light .recharts-tooltip-item {
+  color: #0F172A !important;
+}
+
+/* Light mode text typography overrides */
+html.light .text-txt-primary { color: #0F172A !important; }
+html.light .text-txt-secondary { color: #475569 !important; }
+html.light .text-txt-secondary\/60,
+html.light .text-txt-secondary\/50,
+html.light .text-txt-secondary\/40,
+html.light .text-txt-secondary\/30 {
+  color: #64748B !important;
+}
+html.light .text-gain { color: #047857 !important; }
+html.light .text-loss { color: #C2410C !important; }
+html.light .text-brand { color: #DC2626 !important; }
+
+/* Light mode dynamic chart SVG stroke & fill overrides */
+html.light svg path[stroke="#4ADE80"] { stroke: #047857 !important; }
+html.light svg path[fill="#4ADE80"] { fill: #047857 !important; }
+html.light svg path[stroke="#A78BFA"] { stroke: #6D28D9 !important; }
+html.light svg path[fill="#A78BFA"] { fill: #6D28D9 !important; }
+html.light svg path[stroke="#FF2A2A"] { stroke: #DC2626 !important; }
+html.light svg path[fill="#FF2A2A"] { fill: #DC2626 !important; }
+html.light svg path[stroke="#FB923C"] { stroke: #C2410C !important; }
+html.light svg path[fill="#FB923C"] { fill: #C2410C !important; }
+html.light svg path[stroke="#06B6D4"] { stroke: #0284C7 !important; }
+html.light svg path[fill="#06B6D4"] { fill: #0284C7 !important; }
+html.light svg path[stroke="#3B82F6"] { stroke: #1D4ED8 !important; }
+html.light svg path[fill="#3B82F6"] { fill: #1D4ED8 !important; }
+html.light svg path[stroke="#F59E0B"] { stroke: #B45309 !important; }
+html.light svg path[fill="#F59E0B"] { fill: #B45309 !important; }
+html.light svg path[stroke="#EC4899"] { stroke: #BE185D !important; }
+html.light svg path[fill="#EC4899"] { fill: #BE185D !important; }
+
+/* Light mode inline background overrides */
+html.light [style*="background-color: rgb(74, 222, 128)"],
+html.light [style*="background-color: #4ADE80"] { background-color: #047857 !important; }
+html.light [style*="background-color: rgb(167, 139, 250)"],
+html.light [style*="background-color: #A78BFA"] { background-color: #6D28D9 !important; }
+html.light [style*="background-color: rgb(255, 42, 42)"],
+html.light [style*="background-color: #FF2A2A"] { background-color: #DC2626 !important; }
+html.light [style*="background-color: rgb(245, 158, 11)"],
+html.light [style*="background-color: #F59E0B"] { background-color: #B45309 !important; }
+html.light [style*="background-color: rgb(59, 130, 246)"],
+html.light [style*="background-color: #3B82F6"] { background-color: #1D4ED8 !important; }
+html.light [style*="background-color: rgb(236, 72, 153)"],
+html.light [style*="background-color: #EC4899"] { background-color: #BE185D !important; }
+html.light [style*="background-color: rgb(6, 182, 212)"],
+html.light [style*="background-color: #06B6D4"] { background-color: #0284C7 !important; }
+html.light [style*="background-color: rgb(249, 115, 22)"],
+html.light [style*="background-color: #F97316"] { background-color: #C2410C !important; }
+
+/* Light mode inline text color overrides */
+html.light [style*="color: rgb(74, 222, 128)"],
+html.light [style*="color: #4ADE80"] { color: #047857 !important; }
+html.light [style*="color: rgb(167, 139, 250)"],
+html.light [style*="color: #A78BFA"] { color: #6D28D9 !important; }
+html.light [style*="color: rgb(255, 42, 42)"],
+html.light [style*="color: #FF2A2A"] { color: #DC2626 !important; }
+
+/* Light mode badge backgrounds & high-contrast pills */
+html.light .bg-white\/5,
+html.light .bg-white\/10 {
+  background-color: #E2E8F0 !important;
+  color: #1E293B !important;
+  border-color: #CBD5E1 !important;
+}
+html.light .bg-gain\/10,
+html.light .bg-gain\/15 {
+  background-color: #D1FAE5 !important;
+  color: #065F46 !important;
+}
+html.light .bg-loss\/10,
+html.light .bg-loss\/15,
+html.light .bg-red-500\/15 {
+  background-color: #FEE2E2 !important;
+  color: #991B1B !important;
+}
+html.light .bg-brand\/10 {
+  background-color: #FFE4E6 !important;
+  color: #9F1239 !important;
+}
+
+/* Light mode border & divider overrides */
+html.light .border-white\/\[0\.04\],
+html.light .border-white\/\[0\.06\],
+html.light .border-white\/10,
+html.light .border-white\/15,
+html.light .border-white\/20,
+html.light .border-border-subtle,
+html.light .divide-white\/\[0\.04\],
+html.light .divide-white\/\[0\.06\] > :not([hidden]) ~ :not([hidden]),
+html.light .divide-y > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Light mode row item background tints */
+html.light .bg-white\/\[0\.01\],
+html.light .bg-white\/\[0\.03\],
+html.light .bg-white\/\[0\.04\],
+html.light .bg-white\/5 {
+  background-color: #FFFFFF !important;
+  border: 1px solid rgba(0, 0, 0, 0.06) !important;
+}
+html.light .bg-white\/\[0\.06\] {
+  background-color: #E2E8F0 !important;
+}
+
+/* Light mode hardcoded dark modal & container cards */
 html.light .bg-\[\#141414\],
+html.light .bg-\[\#141414\]\/95,
+html.light .bg-\[\#141414\]\/90,
 html.light .bg-\[\#191919\],
 html.light .bg-\[\#121212\],
 html.light .bg-\[\#1a1a1a\] {
   background-color: #FFFFFF !important;
-  color: #0F172A;
+  color: #0F172A !important;
+  border-color: #CBD5E1 !important;
 }
 
+/* Light mode form controls & select dropdown options */
+html.light select option {
+  background-color: #FFFFFF;
+  color: #0F172A;
+}
+html.light input,
+html.light select,
+html.light textarea {
+  color: #0F172A !important;
+  border-bottom-color: rgba(0, 0, 0, 0.15) !important;
+}
+html.light input:focus,
+html.light select:focus,
+html.light textarea:focus {
+  border-bottom-color: var(--color-brand) !important;
+}
+html.light input::placeholder {
+  color: #94A3B8 !important;
+}
+
+/* Light mode header, navigation bars & sidebars */
+html.light header,
+html.light nav#bottom-nav,
+html.light aside {
+  background-color: rgba(255, 255, 255, 0.92) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+}
 html {
   background-color: var(--color-base);
   color: var(--color-txt-primary);
@@ -116,8 +298,75 @@ select option {
 }
 
 body.modal-open #bottom-nav,
-body.modal-open .fab-container {
+body.modal-open .fab-container,
+body.modal-open .balance-action-bar {
   display: none !important;
+}
+
+/* Clean modern number input styling without clunky native spin arrows */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* UI Motion Disabling Switch */
+.no-animations,
+.no-animations * {
+  animation: none !important;
+  transition: none !important;
+  transform: none !important;
+}
+
+/* Global button, input, and focus styles */
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent !important;
+  outline: none !important;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--color-brand) !important;
+  outline-offset: 2px;
+}
+
+/* Page entrance animations */
+.page-enter {
+  animation: pageEnter 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Ambient glow orb animations */
+@keyframes ambientDrift {
+  0% {
+    transform: translate(-50%, 0px) scale(1);
+  }
+  50% {
+    transform: translate(-48%, 20px) scale(1.15);
+  }
+  100% {
+    transform: translate(-50%, 0px) scale(1);
+  }
+}
+.animate-ambient-drift {
+  animation: ambientDrift 8s ease-in-out infinite;
 }
 
 
