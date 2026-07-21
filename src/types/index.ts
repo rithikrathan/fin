@@ -169,6 +169,7 @@ export interface Settings {
   last_reconciliation: string | null;
   cooling_off_hours: number;
   waterfall_priority: number[];
+  theme_mode?: 'system' | 'light' | 'dark';
 }
 
 export interface FieldSelector {

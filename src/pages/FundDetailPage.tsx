@@ -7,6 +7,7 @@ import Card from '../components/shared/Card';
 import Button from '../components/shared/Button';
 import Badge from '../components/shared/Badge';
 import Modal from '../components/shared/Modal';
+import FloatingAddButton from '../components/shared/FloatingAddButton';
 import {
   Area,
   XAxis,
@@ -392,7 +393,7 @@ export default function FundDetailPage() {
               </span>
             )}
           </h3>
-          <Button variant="secondary" size="sm" onClick={() => setMilestoneOpen(true)}>
+          <Button variant="secondary" size="sm" onClick={() => setMilestoneOpen(true)} className="hidden lg:flex">
             + Add Milestone
           </Button>
         </div>
@@ -417,14 +418,14 @@ export default function FundDetailPage() {
                       {!m.reached && (
                         <button
                           onClick={() => dispatch({ type: 'UPDATE_MILESTONE', payload: { ...m, reached: true } })}
-                          className="text-xs text-gain hover:text-gain/80 cursor-pointer"
+                          className="text-xs text-gain hover:text-gain/80 border border-white/10 rounded-lg px-2 py-1 hover:bg-white/[0.04] transition-all cursor-pointer"
                         >
                           Mark Reached
                         </button>
                       )}
                       <button
                         onClick={() => dispatch({ type: 'REMOVE_MILESTONE', payload: m.id })}
-                        className="text-xs text-txt-secondary/40 hover:text-red-400 cursor-pointer"
+                        className="text-xs text-txt-secondary/40 hover:text-red-400 border border-white/10 rounded-lg px-2 py-1 hover:bg-white/[0.04] hover:border-red-500/20 transition-all cursor-pointer"
                       >
                         ✕
                       </button>
@@ -509,6 +510,7 @@ export default function FundDetailPage() {
         fundId={fundId}
         dispatch={dispatch}
       />
+      <FloatingAddButton onClick={() => setMilestoneOpen(true)} />
     </div>
   );
 }
@@ -546,14 +548,14 @@ function MilestoneFormModal({
 
   return (
     <Modal open={open} onClose={onClose} title="Add Milestone">
-      <div className="space-y-4">
+      <div className="space-y-5">
         <div>
           <label className="block text-xs text-txt-secondary mb-1">Name</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Emergency Fund 3-month buffer"
-            className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
+            className="w-full bg-transparent border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary placeholder:text-txt-secondary/30 outline-none transition-colors"
           />
         </div>
         <div>
@@ -564,10 +566,10 @@ function MilestoneFormModal({
             onChange={(e) => setTarget(e.target.value)}
             placeholder="0"
             min="0"
-            className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary font-mono placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
+            className="w-full bg-transparent border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary font-mono placeholder:text-txt-secondary/30 outline-none transition-colors"
           />
         </div>
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex justify-end gap-3 pt-2">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           <Button variant="primary" onClick={save} disabled={!name.trim() || !target}>Add</Button>
         </div>

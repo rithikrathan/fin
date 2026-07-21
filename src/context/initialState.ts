@@ -1,46 +1,4 @@
 import type { AppState } from '../types';
+import { getSeedState } from '../data/seedData';
 
-export const initialState: AppState = {
-  funds: [
-    { id: 1, name: 'needs', balance: 0, allocation_pct: 50, allocation_locked: false, color: '#FF2A2A', deadline: null, goal_amount: null, interest_rate: null, interest_frequency: null, interest_calc_type: null, is_career_fund: false },
-    { id: 2, name: 'wants', balance: 0, allocation_pct: 20, allocation_locked: false, color: '#A78BFA', deadline: null, goal_amount: null, interest_rate: null, interest_frequency: null, interest_calc_type: null, is_career_fund: false },
-    { id: 3, name: 'savings', balance: 0, allocation_pct: 30, allocation_locked: false, color: '#4ADE80', deadline: null, goal_amount: null, interest_rate: null, interest_frequency: null, interest_calc_type: null, is_career_fund: false },
-  ],
-
-  milestones: [],
-
-  fund_snapshots: [],
-
-  transactions: [],
-
-  wants: [],
-
-  needs: [],
-
-  investments: [],
-
-  debts: [],
-
-  reports: [],
-
-  message_patterns: [],
-  sms_logs: [],
-  detected_transactions: [],
-
-  settings: {
-    currency: '₹',
-    locale: 'en-IN',
-    expected_monthly_income: 0,
-    scale_amount: 5000,
-    impulse_tax_pct: 20,
-    hourly_rate: 500,
-    allocation_mode: 'blind',
-    baseline_survival_amount: 0,
-    mock_salary: 0,
-    last_reconciliation: null,
-    cooling_off_hours: 48,
-    waterfall_priority: [],
-  },
-
-  loading: false,
-};
+export const initialState: AppState = getSeedState();

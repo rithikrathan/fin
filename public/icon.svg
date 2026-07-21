@@ -4,7 +4,7 @@
       <rect width="512" height="512" rx="96" ry="96"/>
     </clipPath>
   </defs>
-  <rect width="512" height="512" rx="96" ry="96" fill="#050505" stroke="#FF2A2A" stroke-width="24"/>
+  <rect width="512" height="512" rx="96" ry="96" fill="#050505"/>
   <text x="256" y="290" text-anchor="middle" dominant-baseline="middle"
         font-family="Inter, system-ui, -apple-system, sans-serif"
         font-weight="800" font-size="220" letter-spacing="-8"

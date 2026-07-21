@@ -1,7 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <clipPath id="rounded">
+      <rect width="512" height="512" rx="96" ry="96"/>
+    </clipPath>
+  </defs>
   <rect width="512" height="512" rx="96" ry="96" fill="#FF2A2A"/>
   <text x="256" y="290" text-anchor="middle" dominant-baseline="middle"
         font-family="Inter, system-ui, -apple-system, sans-serif"
         font-weight="800" font-size="220" letter-spacing="-8"
-        fill="#050505">Fin</text>
+        fill="#050505" stroke="#050505" stroke-width="6" paint-order="stroke fill">Fin</text>
 </svg>

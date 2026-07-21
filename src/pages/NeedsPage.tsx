@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { formatCurrency, generateId } from '../utils/helpers';
-import Card from '../components/shared/Card';
 import Button from '../components/shared/Button';
-import Badge from '../components/shared/Badge';
 import Modal from '../components/shared/Modal';
 import EmptyState from '../components/shared/EmptyState';
+import FloatingAddButton from '../components/shared/FloatingAddButton';
 
 export default function NeedsPage() {
   const { state, dispatch } = useApp();
@@ -24,49 +23,51 @@ export default function NeedsPage() {
   const filtered = tab === 'recurring' ? recurring : oneTime;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="grid grid-cols-2 gap-4">
-        <Card className="p-6">
-          <div className="text-sm text-txt-secondary uppercase tracking-widest mb-2">
+    <div className="max-w-5xl mx-auto space-y-8">
+      {/* Flattened top summary */}
+      <div className="grid grid-cols-2 divide-x divide-white/[0.06] border-b border-white/[0.06] pb-6 gap-2">
+        <div className="pr-4">
+          <div className="text-[10px] text-txt-secondary uppercase tracking-widest font-bold mb-1">
             Recurring Monthly
           </div>
-          <div className="font-mono text-2xl sm:text-3xl font-bold text-loss min-w-0 break-all">
+          <div className="font-mono text-2xl font-bold text-loss">
             {formatCurrency(monthlyTotal)}
           </div>
-          <div className="text-sm text-txt-secondary mt-1">
+          <div className="text-[10px] text-txt-secondary mt-0.5">
             {recurring.length} active bills
           </div>
-        </Card>
-        <Card className="p-6">
-          <div className="text-sm text-txt-secondary uppercase tracking-widest mb-2">
+        </div>
+        <div className="pl-4">
+          <div className="text-[10px] text-txt-secondary uppercase tracking-widest font-bold mb-1">
             One-Time Needs
           </div>
-          <div className="font-mono text-2xl sm:text-3xl font-bold text-txt-primary">
-            {oneTime.length}
+          <div className="font-mono text-2xl font-bold text-txt-primary">
+            {oneTime.length} items
           </div>
-          <div className="text-sm text-txt-secondary mt-1">
+          <div className="text-[10px] text-txt-secondary mt-0.5">
             {oneTime.filter((n) => n.active).length} pending
           </div>
-        </Card>
+        </div>
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between border-b border-white/[0.06] pb-px">
         <div className="flex gap-2">
           {(['recurring', 'onetime'] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-4 py-2 rounded-xl text-base font-semibold transition-all transform duration-150 active:scale-95 cursor-pointer ${
-                tab === t
-                  ? 'bg-brand/15 text-brand border border-brand/20 shadow-glow'
-                  : 'text-txt-secondary hover:text-txt-primary hover:bg-white/[0.04]'
+              className={`px-4 py-3 text-sm font-semibold transition-all relative cursor-pointer ${
+                tab === t ? 'text-brand font-bold' : 'text-txt-secondary hover:text-txt-primary'
               }`}
             >
               {t === 'recurring' ? 'Recurring' : 'One-Time'}
+              {tab === t && (
+                <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand shadow-glow animate-fadeIn" />
+              )}
             </button>
           ))}
         </div>
-        <Button variant="primary" size="md" onClick={() => setFormOpen(true)}>
+        <Button variant="primary" size="sm" onClick={() => setFormOpen(true)} className="hidden lg:flex">
           + Add Need
         </Button>
       </div>
@@ -80,70 +81,75 @@ export default function NeedsPage() {
               ? 'Add your recurring bills, rent, subscriptions, etc.'
               : 'Add one-time purchases or payments you need to make.'
           }
-          action={{ label: '+ Add Need', onClick: () => setFormOpen(true) }}
         />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-3">
           {filtered.map((need) => (
-            <Card key={need.id} className={`p-5 ${!need.active && need.recurring ? 'opacity-50' : ''}`}>
-              <div className="flex items-start justify-between mb-3">
-                <div className="min-w-0">
-                  <h4 className="text-lg font-semibold text-txt-primary truncate">{need.name}</h4>
-                  <div className="text-sm text-txt-secondary">{need.category}</div>
-                </div>
-                <div className="flex gap-2">
-                  {need.recurring && (
-                    <Badge color="bg-blue-500/10 text-blue-400">{need.frequency || 'recurring'}</Badge>
-                  )}
+            <div key={need.id} className={`py-4 px-3 rounded-xl bg-white/[0.03] flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${!need.active && need.recurring ? 'opacity-40' : ''}`}>
+              <div className="min-w-0 space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h4 className="text-base font-bold text-txt-primary truncate">{need.name}</h4>
+                  <span className="text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-txt-secondary">
+                    {need.category}
+                  </span>
                   {need.autopay && (
-                    <Badge color="bg-gain/10 text-gain">Autopay</Badge>
+                    <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/20">
+                      Autopay
+                    </span>
+                  )}
+                  {need.recurring && need.frequency && (
+                    <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                      {need.frequency}
+                    </span>
                   )}
                 </div>
-              </div>
 
-              <div className="font-mono text-2xl font-bold text-txt-primary mb-3">
-                {formatCurrency(need.amount)}
-              </div>
-
-              {need.due_date && (
-                <div className="text-sm text-txt-secondary mb-3">
-                  Due: <span className="text-txt-primary">{need.due_date}</span>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-txt-secondary">
+                  {need.due_date && (
+                    <span>Due: <span className="text-txt-primary font-medium">{need.due_date}</span></span>
+                  )}
+                  <span>Paid from: <span className="text-txt-primary font-medium capitalize">{need.fund_name}</span> fund</span>
+                  {need.notes && <span className="italic">“{need.notes}”</span>}
                 </div>
-              )}
-
-              <div className="flex items-center gap-2 text-sm text-txt-secondary mb-4">
-                <span>From</span>
-                <span className="text-txt-primary capitalize font-medium">{need.fund_name}</span>
-                <span>fund</span>
               </div>
 
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() =>
-                    dispatch({
-                      type: 'UPDATE_NEED',
-                      payload: { ...need, active: !need.active },
-                    })
-                  }
-                >
-                  {need.active ? 'Pause' : 'Resume'}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="danger"
-                  onClick={() => dispatch({ type: 'REMOVE_NEED', payload: need.id })}
-                >
-                  Delete
-                </Button>
+              <div className="flex items-center gap-4 shrink-0 justify-between sm:justify-start">
+                <span className="font-mono text-lg font-bold text-txt-primary">
+                  {formatCurrency(need.amount)}
+                </span>
+                
+                <div className="flex items-center gap-2">
+                  {need.recurring && (
+                    <Button
+                      size="sm"
+                      variant="outlined"
+                      onClick={() =>
+                        dispatch({
+                          type: 'UPDATE_NEED',
+                          payload: { ...need, active: !need.active },
+                        })
+                      }
+                    >
+                      {need.active ? 'Pause' : 'Resume'}
+                    </Button>
+                  )}
+                  <Button
+                    size="sm"
+                    variant="outlined"
+                    onClick={() => dispatch({ type: 'REMOVE_NEED', payload: need.id })}
+                    className="hover:text-red-400 hover:border-red-500/20"
+                  >
+                    ✕
+                  </Button>
+                </div>
               </div>
-            </Card>
+            </div>
           ))}
         </div>
       )}
 
       <NeedForm open={formOpen} onClose={() => setFormOpen(false)} funds={state.funds} dispatch={dispatch} />
+      <FloatingAddButton onClick={() => setFormOpen(true)} />
     </div>
   );
 }
@@ -205,67 +211,74 @@ function NeedForm({
 
   return (
     <Modal open={open} onClose={onClose} title="Add Need">
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-5">
         <div>
-          <label className="block text-sm text-txt-secondary mb-1.5">Name</label>
+          <label className="block text-xs text-txt-secondary mb-1">Name</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Rent, Netflix, Electricity"
-            className="w-full bg-white/[0.04] border border-border-subtle rounded-xl px-4 py-3 text-base text-txt-primary placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
+            className="w-full bg-transparent border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary placeholder:text-txt-secondary/30 outline-none transition-colors"
           />
         </div>
+        
         <div>
-          <label className="block text-sm text-txt-secondary mb-1.5">Amount (₹)</label>
+          <label className="block text-xs text-txt-secondary mb-1">Amount (₹)</label>
           <input
             type="number"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0"
             min="0"
-            className="w-full bg-white/[0.04] border border-border-subtle rounded-xl px-4 py-3 text-base text-txt-primary font-mono placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
+            className="w-full bg-transparent border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary font-mono placeholder:text-txt-secondary/30 outline-none transition-colors"
           />
         </div>
+
         <div>
-          <label className="block text-sm text-txt-secondary mb-1.5">Category</label>
+          <label className="block text-xs text-txt-secondary mb-1">Category</label>
           <input
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             placeholder="e.g. Housing, Utilities, Subscriptions"
-            className="w-full bg-white/[0.04] border border-border-subtle rounded-xl px-4 py-3 text-base text-txt-primary placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
+            className="w-full bg-transparent border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary placeholder:text-txt-secondary/30 outline-none transition-colors"
           />
         </div>
-        <div className="flex gap-3">
-          <button
-            type="button"
-            onClick={() => setRecurring(true)}
-            className={`flex-1 py-3 rounded-xl text-base font-semibold border transition-all transform duration-150 active:scale-95 cursor-pointer ${
-              recurring
-                ? 'bg-brand/10 border-brand/30 text-brand shadow-glow'
-                : 'bg-white/[0.02] border-border-subtle text-txt-secondary hover:text-txt-primary hover:bg-white/[0.04]'
-            }`}
-          >
-            Recurring
-          </button>
-          <button
-            type="button"
-            onClick={() => setRecurring(false)}
-            className={`flex-1 py-3 rounded-xl text-base font-semibold border transition-all transform duration-150 active:scale-95 cursor-pointer ${
-              !recurring
-                ? 'bg-brand/10 border-brand/30 text-brand shadow-glow'
-                : 'bg-white/[0.02] border-border-subtle text-txt-secondary hover:text-txt-primary hover:bg-white/[0.04]'
-            }`}
-          >
-            One-Time
-          </button>
+
+        <div>
+          <label className="block text-xs text-txt-secondary mb-1.5">Intent Type</label>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setRecurring(true)}
+              className={`flex-1 py-2.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                recurring
+                  ? 'bg-brand/10 border-brand/20 text-brand'
+                  : 'bg-white/[0.01] border-white/10 text-txt-secondary hover:text-txt-primary hover:bg-white/[0.04]'
+              }`}
+            >
+              Recurring Bill
+            </button>
+            <button
+              type="button"
+              onClick={() => setRecurring(false)}
+              className={`flex-1 py-2.5 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                !recurring
+                  ? 'bg-brand/10 border-brand/20 text-brand'
+                  : 'bg-white/[0.01] border-white/10 text-txt-secondary hover:text-txt-primary hover:bg-white/[0.04]'
+              }`}
+            >
+              One-Time Need
+            </button>
+          </div>
         </div>
+
         {recurring && (
           <div>
-            <label className="block text-sm text-txt-secondary mb-1.5">Frequency</label>
+            <label className="block text-xs text-txt-secondary mb-1.5">Frequency</label>
             <select
               value={frequency}
-              onChange={(e) => setFrequency(e.target.value as 'monthly' | 'yearly' | 'weekly')}
-              className="w-full bg-white/[0.04] border border-border-subtle rounded-xl px-4 py-3 text-base text-txt-primary outline-none focus:border-brand/50 transition-colors"
+              onChange={(e) => setFrequency(e.target.value as any)}
+              className="w-full bg-[#121212] border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary outline-none transition-colors"
             >
               <option value="monthly">Monthly</option>
               <option value="weekly">Weekly</option>
@@ -273,52 +286,57 @@ function NeedForm({
             </select>
           </div>
         )}
+
         <div>
-          <label className="block text-sm text-txt-secondary mb-1.5">
+          <label className="block text-xs text-txt-secondary mb-1.5">
             {recurring ? 'Next Due Date' : 'Due Date'}
           </label>
           <input
             type="date"
             value={dueDate}
             onChange={(e) => setDueDate(e.target.value)}
-            className="w-full bg-white/[0.04] border border-border-subtle rounded-xl px-4 py-3 text-base text-txt-primary outline-none focus:border-brand/50 transition-colors"
+            className="w-full bg-[#121212] border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary outline-none transition-colors font-mono"
           />
         </div>
+
         <div>
-          <label className="block text-sm text-txt-secondary mb-1.5">Pay From Fund</label>
+          <label className="block text-xs text-txt-secondary mb-1.5">Pay From Fund</label>
           <select
             value={fundId}
             onChange={(e) => setFundId(Number(e.target.value))}
-            className="w-full bg-white/[0.04] border border-border-subtle rounded-xl px-4 py-3 text-base text-txt-primary outline-none focus:border-brand/50 transition-colors"
+            className="w-full bg-[#121212] border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary outline-none transition-colors"
           >
             {funds.map((f) => (
               <option key={f.id} value={f.id}>
-                {f.name.charAt(0).toUpperCase() + f.name.slice(1)} — {formatCurrency(f.balance)}
+                {f.name.toUpperCase()} (₹{f.balance.toLocaleString('en-IN')})
               </option>
             ))}
           </select>
         </div>
-        <div className="flex items-center gap-3">
+
+        <div className="flex items-center gap-3 py-1">
           <input
             type="checkbox"
             id="autopay"
             checked={autopay}
             onChange={(e) => setAutopay(e.target.checked)}
-            className="h-4 w-4 accent-brand"
+            className="h-4.5 w-4.5 accent-brand"
           />
-          <label htmlFor="autopay" className="text-base text-txt-primary">
-            Autopay enabled
+          <label htmlFor="autopay" className="text-sm font-semibold text-txt-primary select-none cursor-pointer">
+            Autopay enabled (marks as automatically paid on due date)
           </label>
         </div>
+
         <div>
-          <label className="block text-sm text-txt-secondary mb-1.5">Notes</label>
+          <label className="block text-xs text-txt-secondary mb-1">Notes</label>
           <input
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Optional"
-            className="w-full bg-white/[0.04] border border-border-subtle rounded-xl px-4 py-3 text-base text-txt-primary placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
+            placeholder="Optional notes"
+            className="w-full bg-transparent border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary placeholder:text-txt-secondary/30 outline-none transition-colors"
           />
         </div>
+
         <div className="flex justify-end gap-3 pt-2">
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancel

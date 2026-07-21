@@ -4,7 +4,6 @@ import { getStorageService } from '../storage/StorageService';
 import { saveAs } from 'file-saver';
 import type { AppState } from '../types';
 import { round2 } from '../utils/helpers';
-import Card from '../components/shared/Card';
 import Button from '../components/shared/Button';
 import Modal from '../components/shared/Modal';
 import PatternBuilder from '../components/messages/PatternBuilder';
@@ -69,7 +68,6 @@ export default function SettingsPage() {
         showToast('Transactions cleared, fund balances preserved');
     };
 
-    // ── Predictions settings ──
     const [incomeInput, setIncomeInput] = useState(String(state.settings.expected_monthly_income || ''));
     const [scaleInput, setScaleInput] = useState(String(state.settings.scale_amount || ''));
 
@@ -85,18 +83,65 @@ export default function SettingsPage() {
     };
 
     return (
-        <div className="max-w-3xl mx-auto space-y-6">
-            {/* ── Predictions ── */}
-            <Card className="p-6">
-                <h3 className="text-xl font-bold text-txt-primary mb-5">Predictions</h3>
-                <p className="text-base text-txt-secondary mb-5">
+        <div className="max-w-3xl mx-auto space-y-8">
+            {/* Theme / Appearance */}
+            <div className="space-y-4">
+                <div className="border-b border-white/[0.06] pb-2">
+                    <h3 className="text-sm uppercase tracking-wider font-bold text-txt-secondary">
+                        Appearance & Theme
+                    </h3>
+                </div>
+                <p className="text-xs text-txt-secondary">
+                    Choose your preferred theme appearance for the application interface.
+                </p>
+                <div className="grid grid-cols-3 gap-3">
+                    {[
+                        { id: 'system', label: 'System (Default)' },
+                        { id: 'light', label: 'Light' },
+                        { id: 'dark', label: 'Dark' },
+                    ].map((t) => {
+                        const currentTheme = state.settings.theme_mode || 'system';
+                        const isSelected = currentTheme === t.id;
+                        return (
+                            <button
+                                key={t.id}
+                                onClick={() => {
+                                    dispatch({
+                                        type: 'UPDATE_SETTINGS',
+                                        payload: { theme_mode: t.id as 'system' | 'light' | 'dark' },
+                                    });
+                                    showToast(`Theme set to ${t.label}`);
+                                }}
+                                className={`py-3 px-4 rounded-xl border text-sm font-semibold transition-all cursor-pointer ${
+                                    isSelected
+                                        ? 'bg-brand/10 text-brand border-brand/40 shadow-sm'
+                                        : 'bg-white/[0.03] text-txt-secondary border-white/10 hover:text-txt-primary hover:bg-white/[0.06]'
+                                }`}
+                            >
+                                {t.label}
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
+
+            {/* Predictions */}
+            <div className="space-y-4">
+                <div className="border-b border-white/[0.06] pb-2">
+                    <h3 className="text-sm uppercase tracking-wider font-bold text-txt-secondary">
+                        Predictions
+                    </h3>
+                </div>
+                <p className="text-xs text-txt-secondary">
                     Configure values used for milestone predictions and projections across fund detail pages.
                 </p>
                 <div className="space-y-4">
                     <div>
-                        <label className="block text-sm text-txt-primary mb-1">Expected Monthly Income</label>
-                        <p className="text-xs text-txt-secondary mb-2">
-                            Your recurring salary or base income. Used to predict when milestones can be reached based on allocation %.
+                        <label className="block text-[10px] uppercase tracking-widest font-bold text-txt-secondary mb-1">
+                            Expected Monthly Income
+                        </label>
+                        <p className="text-xs text-txt-secondary/60 mb-2">
+                            Recurring salary or base income. Used to predict milestone timelines.
                         </p>
                         <input
                             type="number"
@@ -104,13 +149,15 @@ export default function SettingsPage() {
                             onChange={(e) => setIncomeInput(e.target.value)}
                             placeholder="e.g. 80000"
                             min="0"
-                            className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary font-mono placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
+                            className="w-full bg-transparent border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary font-mono placeholder:text-txt-secondary/30 outline-none transition-colors"
                         />
                     </div>
                     <div>
-                        <label className="block text-sm text-txt-primary mb-1">Scale Amount</label>
-                        <p className="text-xs text-txt-secondary mb-2">
-                            A "what-if" amount per month. Predicts how long milestones take at this investment rate.
+                        <label className="block text-[10px] uppercase tracking-widest font-bold text-txt-secondary mb-1">
+                            Scale Amount
+                        </label>
+                        <p className="text-xs text-txt-secondary/60 mb-2">
+                            A "what-if" monthly investment rate. Predicts how long milestones take at this rate.
                         </p>
                         <input
                             type="number"
@@ -118,55 +165,63 @@ export default function SettingsPage() {
                             onChange={(e) => setScaleInput(e.target.value)}
                             placeholder="e.g. 5000"
                             min="0"
-                            className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary font-mono placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
+                            className="w-full bg-transparent border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary font-mono placeholder:text-txt-secondary/30 outline-none transition-colors"
                         />
                     </div>
                 </div>
-                <div className="mt-5">
+                <div className="pt-2">
                     <Button variant="primary" onClick={savePredictions}>
                         Save Prediction Settings
                     </Button>
                 </div>
-            </Card>
+            </div>
 
-            {/* ── SMS Patterns ── */}
-            <Card className="p-6">
-                <h3 className="text-xl font-bold text-txt-primary mb-2">SMS Patterns</h3>
-                <p className="text-sm text-txt-secondary mb-4">
+            {/* SMS Patterns */}
+            <div className="space-y-4">
+                <div className="border-b border-white/[0.06] pb-2">
+                    <h3 className="text-sm uppercase tracking-wider font-bold text-txt-secondary">
+                        SMS Patterns
+                    </h3>
+                </div>
+                <p className="text-xs text-txt-secondary">
                     Create regex patterns to match bank SMS and auto-detect transactions.
                 </p>
                 <PatternBuilder />
-            </Card>
+            </div>
 
-            {/* ── Data Management ── */}
-            <Card className="p-6">
-                <h3 className="text-xl font-bold text-txt-primary mb-5">Data Management</h3>
+            {/* Data Management */}
+            <div className="space-y-4">
+                <div className="border-b border-white/[0.06] pb-2">
+                    <h3 className="text-sm uppercase tracking-wider font-bold text-txt-secondary">
+                        Data Management
+                    </h3>
+                </div>
 
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between py-3 border-b border-border-subtle">
+                <div className="space-y-3">
+                    <div className="py-4 px-3 rounded-xl bg-white/[0.03] flex items-center justify-between">
                         <div>
-                            <div className="text-base font-medium text-txt-primary">Export Data</div>
-                            <div className="text-sm text-txt-secondary">Download all data as a JSON file</div>
+                            <div className="text-sm font-semibold text-txt-primary">Export Data</div>
+                            <div className="text-xs text-txt-secondary mt-0.5">Download all data as a zip file</div>
                         </div>
-                        <Button variant="secondary" onClick={exportData}>
+                        <Button variant="secondary" size="sm" onClick={exportData}>
                             Export
                         </Button>
                     </div>
 
-                    <div className="flex items-center justify-between py-3 border-b border-border-subtle">
+                    <div className="py-4 px-3 rounded-xl bg-white/[0.03] flex items-center justify-between">
                         <div>
-                            <div className="text-base font-medium text-txt-primary">Share Data</div>
-                            <div className="text-sm text-txt-secondary">Copy data to clipboard or share</div>
+                            <div className="text-sm font-semibold text-txt-primary">Share Data</div>
+                            <div className="text-xs text-txt-secondary mt-0.5">Copy data to clipboard or share</div>
                         </div>
-                        <Button variant="secondary" onClick={shareData}>
+                        <Button variant="secondary" size="sm" onClick={shareData}>
                             Share
                         </Button>
                     </div>
 
-                    <div className="flex items-center justify-between py-3 border-b border-border-subtle">
+                    <div className="py-4 px-3 rounded-xl bg-white/[0.03] flex items-center justify-between">
                         <div>
-                            <div className="text-base font-medium text-txt-primary">Import Data</div>
-                            <div className="text-sm text-txt-secondary">Load data from a JSON backup file</div>
+                            <div className="text-sm font-semibold text-txt-primary">Import Data</div>
+                            <div className="text-xs text-txt-secondary mt-0.5">Load data from a zip backup file</div>
                         </div>
                         <>
                             <input
@@ -176,76 +231,66 @@ export default function SettingsPage() {
                                 onChange={importData}
                                 className="hidden"
                             />
-                            <Button variant="secondary" onClick={() => fileRef.current?.click()}>
+                            <Button variant="secondary" size="sm" onClick={() => fileRef.current?.click()}>
                                 Import
                             </Button>
                         </>
                     </div>
 
-                    <div className="flex items-center justify-between py-3 border-b border-border-subtle">
+                    <div className="py-4 px-3 rounded-xl bg-white/[0.03] flex items-center justify-between">
                         <div>
-                            <div className="text-base font-medium text-red-400">Reset Transactions</div>
-                            <div className="text-sm text-txt-secondary">
+                            <div className="text-sm font-semibold text-red-400">Reset Transactions</div>
+                            <div className="text-xs text-txt-secondary mt-0.5">
                                 Clear all transactions but keep fund balances, milestones, and snapshots.
                             </div>
                         </div>
-                        <Button variant="danger" onClick={() => setResetTxOpen(true)}>
+                        <Button variant="danger" size="sm" onClick={() => setResetTxOpen(true)}>
                             Reset
                         </Button>
                     </div>
 
-                    <div className="flex items-center justify-between py-3">
+                    <div className="py-4 px-3 rounded-xl bg-white/[0.03] flex items-center justify-between">
                         <div>
-                            <div className="text-base font-medium text-red-400">Delete All Data</div>
-                            <div className="text-sm text-txt-secondary">
+                            <div className="text-sm font-semibold text-red-400">Delete All Data</div>
+                            <div className="text-xs text-txt-secondary mt-0.5">
                                 Permanently remove everything. This cannot be undone.
                             </div>
                         </div>
-                        <Button variant="danger" onClick={() => setDeleteOpen(true)}>
+                        <Button variant="danger" size="sm" onClick={() => setDeleteOpen(true)}>
                             Delete
                         </Button>
                     </div>
                 </div>
-            </Card>
+            </div>
 
-            {/* ── About ── */}
-            <Card className="p-6">
-                <h3 className="text-xl font-bold text-txt-primary mb-3">About</h3>
-                <div className="space-y-2 text-base text-txt-secondary">
-                    <div className="flex justify-between">
-                        <span>Funds</span>
-                        <span className="font-mono text-txt-primary">{state.funds.length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span>Transactions</span>
-                        <span className="font-mono text-txt-primary">{state.transactions.length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span>Wants</span>
-                        <span className="font-mono text-txt-primary">{state.wants.length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span>Needs</span>
-                        <span className="font-mono text-txt-primary">{state.needs.length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span>Investments</span>
-                        <span className="font-mono text-txt-primary">{state.investments.length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span>Milestones</span>
-                        <span className="font-mono text-txt-primary">{state.milestones.length}</span>
-                    </div>
-                    <div className="flex justify-between">
-                        <span>Saved Reports</span>
-                        <span className="font-mono text-txt-primary">{state.reports.length}</span>
-                    </div>
+            {/* About */}
+            <div className="space-y-4">
+                <div className="border-b border-white/[0.06] pb-2">
+                    <h3 className="text-sm uppercase tracking-wider font-bold text-txt-secondary">
+                        About
+                    </h3>
                 </div>
-            </Card>
+                <div className="space-y-3 text-sm">
+                    {[
+                        ['Funds', state.funds.length],
+                        ['Transactions', state.transactions.length],
+                        ['Wants', state.wants.length],
+                        ['Needs', state.needs.length],
+                        ['Investments', state.investments.length],
+                        ['Milestones', state.milestones.length],
+                        ['Saved Reports', state.reports.length],
+                    ].map(([label, count]) => (
+                        <div key={label} className="py-2.5 px-3 rounded-xl bg-white/[0.03] flex justify-between">
+                            <span className="text-txt-secondary">{label}</span>
+                            <span className="font-mono text-txt-primary">{count}</span>
+                        </div>
+                    ))}
+                </div>
+            </div>
 
             <Modal open={resetTxOpen} onClose={() => setResetTxOpen(false)} title="Reset Transactions">
-                <p className="text-base text-txt-secondary mb-6">
-                    This will clear all transaction history but keep your fund balances, milestones, and snapshots. You can still see your current fund balances.
+                <p className="text-sm text-txt-secondary mb-6">
+                    This will clear all transaction history but keep your fund balances, milestones, and snapshots.
                 </p>
                 <div className="flex justify-end gap-3">
                     <Button variant="ghost" onClick={() => setResetTxOpen(false)}>
@@ -258,7 +303,7 @@ export default function SettingsPage() {
             </Modal>
 
             <Modal open={deleteOpen} onClose={() => setDeleteOpen(false)} title="Delete All Data">
-                <p className="text-base text-txt-secondary mb-6">
+                <p className="text-sm text-txt-secondary mb-6">
                     This will permanently delete all your transactions, wants, needs, investments, and reports. This action cannot be undone.
                 </p>
                 <div className="flex justify-end gap-3">

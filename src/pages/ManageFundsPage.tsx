@@ -8,6 +8,7 @@ import Button from '../components/shared/Button';
 import Badge from '../components/shared/Badge';
 import Modal from '../components/shared/Modal';
 import EmptyState from '../components/shared/EmptyState';
+import FloatingAddButton from '../components/shared/FloatingAddButton';
 
 const PRESET_COLORS = ['#FF2A2A', '#A78BFA', '#4ADE80', '#F59E0B', '#3B82F6', '#EC4899', '#06B6D4', '#F97316'];
 const PROTECTED_NAMES = ['needs', 'wants', 'savings'];
@@ -62,18 +63,17 @@ export default function ManageFundsPage() {
             {state.funds.length} funds · {totalPct}% allocated
           </p>
         </div>
-        <Button variant="primary" onClick={openCreate}>
+        <Button variant="primary" onClick={openCreate} className="hidden lg:flex">
           + Create Fund
         </Button>
       </div>
 
       {state.funds.length === 0 ? (
-        <EmptyState
-          icon="◈"
-          title="No funds yet"
-          description="Create your first fund to start tracking."
-          action={{ label: '+ Create Fund', onClick: openCreate }}
-        />
+          <EmptyState
+            icon="◈"
+            title="No funds created"
+            description="Create funds to split your income into buckets."
+          />
       ) : (
         <div className="space-y-3">
           {state.funds.map((fund) => {
@@ -183,6 +183,7 @@ export default function ManageFundsPage() {
           {toast}
         </div>
       )}
+      <FloatingAddButton onClick={openCreate} />
     </div>
   );
 }
@@ -208,8 +209,8 @@ function FundFormModal({
   const [interestRate, setInterestRate] = useState('');
   const [interestFrequency, setInterestFrequency] = useState<string>('');
   const [interestCalcType, setInterestCalcType] = useState<string>('');
-  const [toast, setToast] = useState('');
   const [nameError, setNameError] = useState('');
+  const [toast, setToast] = useState('');
 
   const isCreating = !editing;
 
@@ -324,15 +325,15 @@ function FundFormModal({
 
   return (
     <Modal open={open} onClose={onClose} title={editing ? 'Edit Fund' : 'Create Fund'}>
-      <div className="space-y-4">
+      <div className="space-y-5">
         <div>
           <label className="block text-xs text-txt-secondary mb-1">Name</label>
           <input
             value={name}
             onChange={(e) => handleNameChange(e.target.value)}
             placeholder="e.g. emergency, vacation"
-            className={`w-full bg-white/[0.04] border rounded-lg px-3 py-2 text-sm text-txt-primary placeholder:text-txt-secondary/50 outline-none transition-colors ${
-              nameError ? 'border-red-400/60 focus:border-red-400' : 'border-border-subtle focus:border-brand/50'
+            className={`w-full bg-transparent border-b rounded-none py-2 text-base text-txt-primary placeholder:text-txt-secondary/30 outline-none transition-colors ${
+              nameError ? 'border-red-400/60 focus:border-red-400' : 'border-white/20 focus:border-brand'
             }`}
           />
           {nameError && (
@@ -362,7 +363,7 @@ function FundFormModal({
             onChange={(e) => setPct(e.target.value)}
             min="0"
             max="100"
-            className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary font-mono outline-none focus:border-brand/50 transition-colors"
+            className="w-full bg-transparent border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary font-mono placeholder:text-txt-secondary/30 outline-none transition-colors"
           />
           <div className="flex justify-between mt-1 text-xs">
             <span className="text-txt-secondary">Total across all funds</span>
@@ -406,7 +407,7 @@ function FundFormModal({
             type="date"
             value={deadline}
             onChange={(e) => setDeadline(e.target.value)}
-            className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary outline-none focus:border-brand/50 transition-colors"
+            className="w-full bg-[#121212] border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary outline-none transition-colors font-mono"
           />
         </div>
 
@@ -418,22 +419,22 @@ function FundFormModal({
             onChange={(e) => setGoalAmount(e.target.value)}
             placeholder="Target balance"
             min="0"
-            className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary font-mono placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
+            className="w-full bg-transparent border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary font-mono placeholder:text-txt-secondary/30 outline-none transition-colors"
           />
         </div>
 
         {deadline && goalAmount && parseFloat(goalAmount) > 0 && (
-          <div className="bg-white/[0.03] rounded-lg p-3 text-xs text-txt-secondary">
-            <div className="text-txt-primary font-medium mb-1">Savings Plan</div>
+          <div className="py-3 border-b border-white/[0.06] text-xs text-txt-secondary">
+            <div className="text-txt-primary font-semibold mb-1">Savings Plan</div>
             <div>
               Required per month: <span className="font-mono text-gain">{formatCurrency(calculateRequired(parseFloat(goalAmount), editing?.balance || 0, deadline))}</span>
             </div>
           </div>
         )}
 
-        <div className="border-t border-border-subtle pt-4 mt-2">
-          <div className="text-xs text-txt-secondary uppercase tracking-widest mb-3">Interest (optional)</div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="border-t border-white/[0.06] pt-4 mt-2">
+          <div className="text-xs text-txt-secondary uppercase tracking-widest font-bold mb-3">Interest (optional)</div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs text-txt-secondary mb-1">Rate % p.a.</label>
               <input
@@ -443,7 +444,7 @@ function FundFormModal({
                 placeholder="e.g. 7"
                 min="0"
                 step="0.1"
-                className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary font-mono placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
+                className="w-full bg-transparent border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary font-mono placeholder:text-txt-secondary/30 outline-none transition-colors"
               />
             </div>
             <div>
@@ -451,7 +452,7 @@ function FundFormModal({
               <select
                 value={interestFrequency}
                 onChange={(e) => setInterestFrequency(e.target.value)}
-                className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary outline-none focus:border-brand/50 transition-colors"
+                className="w-full bg-[#121212] border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary outline-none transition-colors"
               >
                 <option value="">None</option>
                 <option value="daily">Daily</option>
@@ -465,7 +466,7 @@ function FundFormModal({
               <select
                 value={interestCalcType}
                 onChange={(e) => setInterestCalcType(e.target.value)}
-                className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary outline-none focus:border-brand/50 transition-colors"
+                className="w-full bg-[#121212] border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary outline-none transition-colors"
               >
                 <option value="">None</option>
                 <option value="compound">Compound</option>

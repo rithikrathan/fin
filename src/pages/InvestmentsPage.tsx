@@ -2,11 +2,10 @@ import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import type { AssetType } from '../types';
 import { formatCurrency, formatDate, getROI, generateId, assetTypeLabels } from '../utils/helpers';
-import Card from '../components/shared/Card';
 import Button from '../components/shared/Button';
-import Badge from '../components/shared/Badge';
 import Modal from '../components/shared/Modal';
 import EmptyState from '../components/shared/EmptyState';
+import FloatingAddButton from '../components/shared/FloatingAddButton';
 
 export default function InvestmentsPage() {
   const { state, dispatch } = useApp();
@@ -28,68 +27,71 @@ export default function InvestmentsPage() {
   );
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <Card className="p-4 text-center">
-          <div className="text-xs text-txt-secondary mb-1">Total Invested</div>
+    <div className="max-w-5xl mx-auto space-y-10">
+      {/* Flattened top summary */}
+      <div className="grid grid-cols-3 divide-x divide-white/[0.06] border-b border-white/[0.06] pb-6 text-center sm:text-left gap-2">
+        <div className="pr-4">
+          <div className="text-[10px] text-txt-secondary uppercase tracking-widest font-bold mb-1">Total Invested</div>
           <div className="font-mono text-xl font-bold text-txt-primary">
             {formatCurrency(totalInvested)}
           </div>
-        </Card>
-        <Card className="p-4 text-center">
-          <div className="text-xs text-txt-secondary mb-1">Current Value</div>
+        </div>
+        <div className="px-4">
+          <div className="text-[10px] text-txt-secondary uppercase tracking-widest font-bold mb-1">Current Value</div>
           <div className="font-mono text-xl font-bold text-txt-primary">
             {formatCurrency(totalCurrent)}
           </div>
-        </Card>
-        <Card className="p-4 text-center">
-          <div className="text-xs text-txt-secondary mb-1">Overall ROI</div>
+        </div>
+        <div className="pl-4">
+          <div className="text-[10px] text-txt-secondary uppercase tracking-widest font-bold mb-1">Overall ROI</div>
           <div
             className={`font-mono text-xl font-bold ${totalROI >= 0 ? 'text-gain' : 'text-loss'}`}
           >
             {totalROI >= 0 ? '+' : ''}
             {totalROI.toFixed(1)}%
           </div>
-        </Card>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="p-5">
-          <h3 className="text-sm font-semibold text-txt-primary mb-4">
-            Allocation by Type
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
+        {/* Allocation */}
+        <div className="space-y-4">
+          <h3 className="text-xs uppercase tracking-wider font-bold text-txt-secondary pb-1 border-b border-white/[0.06]">
+            Allocation by Asset Type
           </h3>
           <div className="space-y-3">
             {Object.entries(byType).map(([type, data]) => {
               const roi = getROI(data.invested, data.current);
               return (
-                <div key={type} className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-txt-primary">
+                <div key={type} className="py-3 px-3 rounded-xl bg-white/[0.03] flex items-center justify-between">
+                  <div>
+                    <span className="text-sm font-bold text-txt-primary">
                       {assetTypeLabels[type] || type}
                     </span>
-                    <span
-                      className={`font-mono ${roi >= 0 ? 'text-gain' : 'text-loss'}`}
-                    >
-                      {roi >= 0 ? '+' : ''}
-                      {roi.toFixed(1)}%
-                    </span>
+                    <div className="flex gap-2 text-[10px] text-txt-secondary font-mono mt-0.5">
+                      <span>Invested: {formatCurrency(data.invested)}</span>
+                      <span>·</span>
+                      <span>Valued: {formatCurrency(data.current)}</span>
+                    </div>
                   </div>
-                  <div className="flex gap-2 text-[10px] text-txt-secondary font-mono">
-                    <span>In: {formatCurrency(data.invested)}</span>
-                    <span>•</span>
-                    <span>Now: {formatCurrency(data.current)}</span>
-                  </div>
+                  <span
+                    className={`font-mono text-sm font-bold ${roi >= 0 ? 'text-gain' : 'text-loss'}`}
+                  >
+                    {roi >= 0 ? '+' : ''}
+                    {roi.toFixed(1)}%
+                  </span>
                 </div>
               );
             })}
           </div>
-        </Card>
+        </div>
 
-        <Card className="p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-txt-primary">Holdings</h3>
-            <Button variant="primary" size="sm" onClick={() => setFormOpen(true)}>
-              + Add
+        {/* Holdings */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between pb-1 border-b border-white/[0.06]">
+            <h3 className="text-xs uppercase tracking-wider font-bold text-txt-secondary">Holdings List</h3>
+            <Button variant="primary" size="sm" onClick={() => setFormOpen(true)} className="hidden lg:flex">
+              + Add holding
             </Button>
           </div>
           {state.investments.length === 0 ? (
@@ -105,45 +107,48 @@ export default function InvestmentsPage() {
                 return (
                   <div
                     key={inv.id}
-                    className="flex items-center justify-between py-2 border-b border-border-subtle last:border-0"
+                    className="py-3 px-3 rounded-xl bg-white/[0.03] flex items-center justify-between"
                   >
                     <div className="min-w-0">
-                      <div className="text-sm text-txt-primary truncate">{inv.name}</div>
-                      <div className="flex items-center gap-2 text-[10px] text-txt-secondary">
-                        <Badge color="bg-white/5 text-txt-secondary">
+                      <div className="text-sm font-bold text-txt-primary truncate">{inv.name}</div>
+                      <div className="flex items-center gap-2 text-[10px] text-txt-secondary mt-0.5">
+                        <span className="uppercase text-[9px] font-bold px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-txt-secondary font-mono">
                           {assetTypeLabels[inv.asset_type]}
-                        </Badge>
+                        </span>
                         <span>{formatDate(inv.purchase_date)}</span>
                       </div>
                     </div>
-                    <div className="text-right shrink-0 ml-3">
-                      <div className="font-mono text-sm text-txt-primary">
-                        {formatCurrency(inv.current_value)}
+                    <div className="flex items-center gap-3 shrink-0 ml-3">
+                      <div className="text-right">
+                        <div className="font-mono text-sm font-bold text-txt-primary">
+                          {formatCurrency(inv.current_value)}
+                        </div>
+                        <div
+                          className={`font-mono text-[10px] font-semibold ${roi >= 0 ? 'text-gain' : 'text-loss'}`}
+                        >
+                          {roi >= 0 ? '+' : ''}
+                          {roi.toFixed(1)}%
+                        </div>
                       </div>
-                      <div
-                        className={`font-mono text-[10px] ${roi >= 0 ? 'text-gain' : 'text-loss'}`}
+                      <button
+                        onClick={() =>
+                          dispatch({ type: 'REMOVE_INVESTMENT', payload: inv.id })
+                        }
+                        className="text-txt-secondary/40 hover:text-red-400 text-xs ml-1 cursor-pointer"
                       >
-                        {roi >= 0 ? '+' : ''}
-                        {roi.toFixed(1)}%
-                      </div>
+                        ✕
+                      </button>
                     </div>
-                    <button
-                      onClick={() =>
-                        dispatch({ type: 'REMOVE_INVESTMENT', payload: inv.id })
-                      }
-                      className="text-txt-secondary/40 hover:text-red-400 text-xs ml-3 cursor-pointer"
-                    >
-                      ✕
-                    </button>
                   </div>
                 );
               })}
             </div>
           )}
-        </Card>
+        </div>
       </div>
 
       <InvestmentForm open={formOpen} onClose={() => setFormOpen(false)} dispatch={dispatch} />
+      <FloatingAddButton onClick={() => setFormOpen(true)} />
     </div>
   );
 }
@@ -191,22 +196,22 @@ function InvestmentForm({
 
   return (
     <Modal open={open} onClose={onClose} title="Add Investment">
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-5">
         <div>
           <label className="block text-xs text-txt-secondary mb-1">Name</label>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Reliance Industries"
-            className="w-full bg-white/[0.04] border border-border-subtle rounded-xl px-4 py-3 text-base text-txt-primary placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
+            placeholder="e.g. Reliance Industries, Parag Parikh Mutual Fund"
+            className="w-full bg-transparent border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary placeholder:text-txt-secondary/30 outline-none transition-colors"
           />
         </div>
         <div>
-          <label className="block text-xs text-txt-secondary mb-1">Asset Type</label>
+          <label className="block text-xs text-txt-secondary mb-1.5">Asset Type</label>
           <select
             value={assetType}
             onChange={(e) => setAssetType(e.target.value as AssetType)}
-            className="w-full bg-white/[0.04] border border-border-subtle rounded-xl px-4 py-3 text-base text-txt-primary outline-none focus:border-brand/50 transition-colors"
+            className="w-full bg-[#121212] border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary outline-none transition-colors"
           >
             {Object.entries(assetTypeLabels).map(([k, v]) => (
               <option key={k} value={k}>
@@ -217,35 +222,35 @@ function InvestmentForm({
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs text-txt-secondary mb-1">Invested (₹)</label>
+            <label className="block text-xs text-txt-secondary mb-1">Invested Amount (₹)</label>
             <input
               type="number"
               value={invested}
               onChange={(e) => setInvested(e.target.value)}
               placeholder="0"
               min="0"
-              className="w-full bg-white/[0.04] border border-border-subtle rounded-xl px-4 py-3 text-base text-txt-primary font-mono placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
+              className="w-full bg-transparent border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary font-mono placeholder:text-txt-secondary/30 outline-none transition-colors"
             />
           </div>
           <div>
-            <label className="block text-xs text-txt-secondary mb-1">Current (₹)</label>
+            <label className="block text-xs text-txt-secondary mb-1">Current Valuation (₹)</label>
             <input
               type="number"
               value={current}
               onChange={(e) => setCurrent(e.target.value)}
               placeholder="0"
               min="0"
-              className="w-full bg-white/[0.04] border border-border-subtle rounded-xl px-4 py-3 text-base text-txt-primary font-mono placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
+              className="w-full bg-transparent border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary font-mono placeholder:text-txt-secondary/30 outline-none transition-colors"
             />
           </div>
         </div>
         <div>
-          <label className="block text-xs text-txt-secondary mb-1">Purchase Date</label>
+          <label className="block text-xs text-txt-secondary mb-1.5">Purchase Date</label>
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full bg-white/[0.04] border border-border-subtle rounded-xl px-4 py-3 text-base text-txt-primary outline-none focus:border-brand/50 transition-colors"
+            className="w-full bg-[#121212] border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary outline-none transition-colors font-mono"
           />
         </div>
         <div>
@@ -253,11 +258,11 @@ function InvestmentForm({
           <input
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Optional"
-            className="w-full bg-white/[0.04] border border-border-subtle rounded-xl px-4 py-3 text-base text-txt-primary placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
+            placeholder="Optional notes"
+            className="w-full bg-transparent border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary placeholder:text-txt-secondary/30 outline-none transition-colors"
           />
         </div>
-        <div className="flex justify-end gap-2 pt-2">
+        <div className="flex justify-end gap-3 pt-2">
           <Button type="button" variant="ghost" onClick={onClose}>
             Cancel
           </Button>

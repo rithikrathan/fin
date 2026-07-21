@@ -2,7 +2,6 @@ import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { formatCurrency, round2 } from '../utils/helpers';
-import Card from '../components/shared/Card';
 import Button from '../components/shared/Button';
 import Modal from '../components/shared/Modal';
 import SurplusRedistributeModal from '../components/funds/SurplusRedistributeModal';
@@ -56,7 +55,7 @@ export default function FundsPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
+    <div className="max-w-5xl mx-auto space-y-10">
       {/* Surplus banner */}
       {fundsWithSurplus.length > 0 && (
         <div className="bg-gain/5 border border-gain/20 rounded-xl p-4 flex items-center justify-between">
@@ -72,21 +71,21 @@ export default function FundsPage() {
       )}
 
       {/* Pie Chart + Fund Cards */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         {/* Pie */}
-        <Card className="lg:col-span-2 p-6 flex flex-col items-center justify-center">
-          <h3 className="text-lg font-bold text-txt-primary mb-4 self-start">
-            Fund Split
+        <div className="lg:col-span-5 flex flex-col items-center justify-center">
+          <h3 className="text-xs uppercase tracking-wider font-bold text-txt-secondary pb-1 border-b border-white/[0.06] w-full mb-4">
+            Fund Allocation Split
           </h3>
           {total > 0 ? (
-            <ResponsiveContainer width="100%" height={260}>
+            <ResponsiveContainer width="100%" height={230}>
               <PieChart>
                 <Pie
                   data={pieData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={isMobile ? 50 : 70}
-                  outerRadius={isMobile ? 85 : 110}
+                  innerRadius={isMobile ? 50 : 65}
+                  outerRadius={isMobile ? 80 : 100}
                   paddingAngle={3}
                   dataKey="value"
                   stroke="none"
@@ -98,203 +97,190 @@ export default function FundsPage() {
                 <Tooltip
                   formatter={(value) => formatCurrency(Number(value ?? 0))}
                   contentStyle={{
-                    background: 'rgba(25,25,25,0.9)',
+                    background: 'rgba(25,25,25,0.95)',
                     border: '1px solid rgba(255,255,255,0.08)',
                     borderRadius: 12,
                     color: '#F4F4F5',
                     fontFamily: 'JetBrains Mono',
-                    fontSize: 13,
+                    fontSize: 12,
                   }}
                 />
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="h-64 flex items-center justify-center text-txt-secondary text-base">
+            <div className="h-48 flex items-center justify-center text-txt-secondary text-sm italic">
               No funds to display
             </div>
           )}
-          <div className="flex gap-5 mt-4 flex-wrap justify-center">
+          <div className="flex gap-4 mt-2 flex-wrap justify-center">
             {state.funds.map((f) => (
-              <div key={f.id} className="flex items-center gap-2 text-sm">
+              <div key={f.id} className="flex items-center gap-1.5 text-xs font-semibold">
                 <div
-                  className="h-3 w-3 rounded-full"
+                  className="h-2.5 w-2.5 rounded-full"
                   style={{ backgroundColor: f.color }}
                 />
                 <span className="text-txt-secondary">
-                  {f.name.charAt(0).toUpperCase() + f.name.slice(1)}
+                  {f.name.toUpperCase()}
                 </span>
-                <span className="font-mono text-txt-primary font-semibold">
+                <span className="font-mono text-txt-primary">
                   {f.allocation_pct}%
                 </span>
               </div>
             ))}
           </div>
-        </Card>
+        </div>
 
-        {/* Fund cards */}
-        <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {state.funds.map((fund) => {
-            const spent = state.transactions
-              .filter((t) => t.type === 'expense' && t.fund_id === fund.id)
-              .reduce((s, t) => s + t.amount, 0);
+        {/* Fund status balances - Flat grid */}
+        <div className="lg:col-span-7 space-y-4">
+          <h3 className="text-xs uppercase tracking-wider font-bold text-txt-secondary pb-1 border-b border-white/[0.06]">
+            Balances & Target Runways
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {state.funds.map((fund) => {
+              const spent = state.transactions
+                .filter((t) => t.type === 'expense' && t.fund_id === fund.id)
+                .reduce((s, t) => s + t.amount, 0);
 
-            const committedNeeds = state.needs
-              .filter((n) => n.fund_id === fund.id && n.active)
-              .reduce((s, n) => {
-                if (n.frequency === 'monthly') return s + n.amount;
-                if (n.frequency === 'weekly') return s + n.amount * 4;
-                if (n.frequency === 'yearly') return s + n.amount / 12;
-                return s + n.amount;
-              }, 0);
+              const committedNeeds = state.needs
+                .filter((n) => n.fund_id === fund.id && n.active)
+                .reduce((s, n) => {
+                  if (n.frequency === 'monthly') return s + n.amount;
+                  if (n.frequency === 'weekly') return s + n.amount * 4;
+                  if (n.frequency === 'yearly') return s + n.amount / 12;
+                  return s + n.amount;
+                }, 0);
 
-            const surplus = fund.balance - committedNeeds;
+              const surplus = fund.balance - committedNeeds;
 
-            return (
-              <Card
-                key={fund.id}
-                className="p-5 cursor-pointer hover:bg-white/[0.03] transition-all"
-                onClick={() => navigate(`/funds/${fund.id}`)}
-              >
-                <div className="flex items-center gap-2.5 mb-4">
-                  <div
-                    className="h-4 w-4 rounded-full"
-                    style={{ backgroundColor: fund.color }}
-                  />
-                  <h4 className="text-base font-semibold text-txt-primary uppercase tracking-wider">
-                    {fund.name}
-                  </h4>
-                </div>
+              return (
+                <div
+                  key={fund.id}
+                  className="p-4 border border-white/[0.06] bg-white/[0.01] rounded-xl hover:border-white/10 transition-colors cursor-pointer"
+                  onClick={() => navigate(`/funds/${fund.id}`)}
+                >
+                  <div className="flex items-center gap-2 mb-3">
+                    <div
+                      className="h-2.5 w-2.5 rounded-full"
+                      style={{ backgroundColor: fund.color }}
+                    />
+                    <h4 className="text-xs font-bold text-txt-secondary uppercase tracking-widest">
+                      {fund.name}
+                    </h4>
+                  </div>
 
-                <div className="font-mono text-2xl sm:text-3xl font-bold text-txt-primary mb-1 min-w-0 break-all">
-                  {formatCurrency(fund.balance)}
-                </div>
-                <div className="text-sm text-txt-secondary mb-4">
-                  {fund.allocation_pct}% allocation
-                </div>
+                  <div className="font-mono text-xl font-bold text-txt-primary truncate">
+                    {formatCurrency(fund.balance)}
+                  </div>
+                  <div className="text-[10px] text-txt-secondary mb-3.5">
+                    {fund.allocation_pct}% split ratio
+                  </div>
 
-                <div className="h-px bg-border-subtle mb-4" />
-
-                <div className="space-y-2 text-sm">
-                  {committedNeeds > 0 && (
+                  <div className="space-y-1.5 text-xs border-t border-white/[0.04] pt-3.5">
+                    {committedNeeds > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-txt-secondary">Needs</span>
+                        <span className="font-mono text-loss">
+                          {formatCurrency(committedNeeds)}
+                        </span>
+                      </div>
+                    )}
                     <div className="flex justify-between">
-                      <span className="text-txt-secondary">Recurring needs</span>
+                      <span className="text-txt-secondary">Spent</span>
                       <span className="font-mono text-loss">
-                        {formatCurrency(committedNeeds)}
+                        {formatCurrency(spent)}
                       </span>
                     </div>
+                    <div className="flex justify-between font-semibold border-t border-white/[0.04] pt-1.5">
+                      <span className="text-txt-primary">Surplus</span>
+                      <span
+                        className={`font-mono ${surplus >= 0 ? 'text-gain' : 'text-loss'}`}
+                      >
+                        {formatCurrency(surplus)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-3">
+                    <div className="h-1 bg-white/[0.06] rounded-full overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${
+                            fund.balance + spent > 0
+                              ? (spent / (fund.balance + spent)) * 100
+                              : 0
+                          }%`,
+                          backgroundColor: fund.color,
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {fund.deadline && (
+                    <div className="mt-2.5 text-[9px] font-mono text-txt-secondary">
+                      Limit: {new Date(fund.deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+                    </div>
                   )}
-                  <div className="flex justify-between">
-                    <span className="text-txt-secondary">Spent</span>
-                    <span className="font-mono text-loss">
-                      {formatCurrency(spent)}
-                    </span>
-                  </div>
-                  <div className="h-px bg-border-subtle" />
-                  <div className="flex justify-between font-semibold">
-                    <span className="text-txt-primary">Surplus</span>
-                    <span
-                      className={`font-mono ${surplus >= 0 ? 'text-gain' : 'text-loss'}`}
-                    >
-                      {formatCurrency(surplus)}
-                    </span>
-                  </div>
                 </div>
-
-                <div className="mt-4">
-                  <div className="h-2 bg-white/[0.06] rounded-full overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all"
-                      style={{
-                        width: `${
-                          fund.balance + spent > 0
-                            ? (spent / (fund.balance + spent)) * 100
-                            : 0
-                        }%`,
-                        backgroundColor: fund.color,
-                      }}
-                    />
-                  </div>
-                </div>
-
-                {fund.deadline && (
-                  <div className="mt-3 text-xs text-txt-secondary">
-                    Deadline: {new Date(fund.deadline).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  </div>
-                )}
-              </Card>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      {/* Quick links to Wants + Needs */}
+      {/* Quick links as flat outline dividers */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <Card
-          className="p-6 cursor-pointer hover:bg-white/[0.03] transition-all border-border-subtle"
-          onClick={() => navigate('/funds/wants')}
+        <div
+          className="p-4 border border-white/[0.06] bg-white/[0.01] rounded-xl cursor-pointer hover:border-white/10 transition-colors flex items-center justify-between"
+          onClick={() => navigate('/wants')}
         >
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm text-txt-secondary uppercase tracking-widest mb-2">
-                Wants
-              </div>
-              <div className="font-mono text-2xl font-bold text-txt-primary">
-                {state.wants.length} items
-              </div>
-              <div className="text-sm text-txt-secondary mt-1">
-                {pendingWants} pending
-              </div>
+          <div>
+            <div className="text-[10px] text-txt-secondary uppercase tracking-widest font-bold mb-1">
+              Wants
             </div>
-            <span className="text-3xl opacity-30">→</span>
+            <div className="font-mono text-lg font-bold text-txt-primary">
+              {state.wants.length} Items ({pendingWants} pending)
+            </div>
           </div>
-        </Card>
+          <span className="text-xl text-txt-secondary/30 font-mono">→</span>
+        </div>
 
-        <Card
-          className="p-6 cursor-pointer hover:bg-white/[0.03] transition-all border-border-subtle"
-          onClick={() => navigate('/funds/needs')}
+        <div
+          className="p-4 border border-white/[0.06] bg-white/[0.01] rounded-xl cursor-pointer hover:border-white/10 transition-colors flex items-center justify-between"
+          onClick={() => navigate('/needs')}
         >
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm text-txt-secondary uppercase tracking-widest mb-2">
-                Needs
-              </div>
-              <div className="font-mono text-2xl font-bold text-txt-primary">
-                {state.needs.length} items
-              </div>
-              <div className="text-sm text-txt-secondary mt-1">
-                {activeNeeds} active
-              </div>
+          <div>
+            <div className="text-[10px] text-txt-secondary uppercase tracking-widest font-bold mb-1">
+              Needs
             </div>
-            <span className="text-3xl opacity-30">→</span>
+            <div className="font-mono text-lg font-bold text-txt-primary">
+              {state.needs.length} Items ({activeNeeds} active)
+            </div>
           </div>
-        </Card>
+          <span className="text-xl text-txt-secondary/30 font-mono">→</span>
+        </div>
 
-        <Card
-          className="p-6 cursor-pointer hover:bg-white/[0.03] transition-all border-border-subtle"
+        <div
+          className="p-4 border border-white/[0.06] bg-white/[0.01] rounded-xl cursor-pointer hover:border-white/10 transition-colors flex items-center justify-between"
           onClick={() => navigate('/funds/manage')}
         >
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm text-txt-secondary uppercase tracking-widest mb-2">
-                Manage
-              </div>
-              <div className="font-mono text-2xl font-bold text-txt-primary">
-                {state.funds.length} funds
-              </div>
-              <div className="text-sm text-txt-secondary mt-1">
-                Create, edit, allocate
-              </div>
+          <div>
+            <div className="text-[10px] text-txt-secondary uppercase tracking-widest font-bold mb-1">
+              Manage Funds
             </div>
-            <span className="text-3xl opacity-30">→</span>
+            <div className="font-mono text-lg font-bold text-txt-primary">
+              {state.funds.length} Active Funds
+            </div>
           </div>
-        </Card>
+          <span className="text-xl text-txt-secondary/30 font-mono">→</span>
+        </div>
       </div>
 
-      <div className="flex flex-wrap justify-end gap-3">
-        <Button variant="secondary" onClick={() => setTransferOpen(true)}>
-          Transfer
+      <div className="flex flex-wrap justify-end gap-3 border-t border-white/[0.06] pt-6">
+        <Button variant="ghost" onClick={() => setTransferOpen(true)}>
+          Transfer Cash
         </Button>
-        <Button variant="secondary" onClick={() => {
+        <Button variant="ghost" onClick={() => {
           if (fundsWithSurplus.length > 0) {
             openRedistribute(fundsWithSurplus[0].id);
           } else if (state.funds.length > 1) {
@@ -303,8 +289,8 @@ export default function FundsPage() {
         }}>
           Redistribute Surplus
         </Button>
-        <Button variant="secondary" onClick={() => setConfigOpen(true)}>
-          Configure Allocation
+        <Button variant="primary" onClick={() => setConfigOpen(true)}>
+          Configure Allocation Ratio
         </Button>
       </div>
 
@@ -408,7 +394,7 @@ function ConfigModal({
 
   return (
     <Modal open={open} onClose={onClose} title="Configure Fund Allocation">
-      <p className="text-base text-txt-secondary mb-4">
+      <p className="text-xs text-txt-secondary mb-4">
         Drag one slider — unlocked funds rebalance proportionally. Lock funds to freeze their %. Must sum to 100%.
       </p>
 
@@ -468,9 +454,9 @@ function ConfigModal({
                       step="0.1"
                       value={pctValues[f.id] || '0'}
                       onChange={(e) => handleSliderChange(f.id, e.target.value)}
-                      className="w-20 bg-white/[0.04] border border-border-subtle rounded-lg px-2 py-1 text-right font-mono text-sm text-txt-primary outline-none focus:border-brand/50 transition-colors"
+                      className="w-20 bg-transparent border-b border-white/20 focus:border-brand rounded-none px-0 py-1 text-right font-mono text-sm text-txt-primary outline-none transition-colors"
                     />
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-txt-secondary text-xs pointer-events-none">%</span>
+                    <span className="absolute right-0 top-1/2 -translate-y-1/2 text-txt-secondary text-xs pointer-events-none">%</span>
                   </div>
                   <button
                     onClick={() => toggleLock(f.id)}

@@ -1,22 +1,22 @@
 import { NavLink } from 'react-router-dom';
 import {
   HomeIcon,
-  DashboardIcon,
   TransactionsIcon,
-  FundsIcon,
   ExpensesIcon,
   InvestmentsIcon,
+  FundsIcon,
+  DashboardIcon,
   ReportsIcon,
   SettingsIcon
 } from '../shared/Icons';
 
 const links = [
   { to: '/', label: 'Home', icon: HomeIcon },
-  { to: '/dashboard', label: 'Dashboard', icon: DashboardIcon },
   { to: '/transactions', label: 'Transactions', icon: TransactionsIcon },
-  { to: '/funds', label: 'Funds', icon: FundsIcon },
-  { to: '/expenses', label: 'Expenses', icon: ExpensesIcon },
-  { to: '/investments', label: 'Investments', icon: InvestmentsIcon },
+  { to: '/needs', label: 'Needs', icon: ExpensesIcon },
+  { to: '/wants', label: 'Wants', icon: InvestmentsIcon },
+  { to: '/funds', label: 'Funds Allocation', icon: FundsIcon },
+  { to: '/investments', label: 'Investments', icon: DashboardIcon },
   { to: '/reports', label: 'Reports', icon: ReportsIcon },
   { to: '/settings', label: 'Settings', icon: SettingsIcon },
 ];

@@ -17,6 +17,35 @@
   --shadow-glow-lg: 0 0 40px rgba(255, 42, 42, 0.25);
 }
 
+html.light {
+  --color-base: #F8F9FA;
+  --color-surface: rgba(255, 255, 255, 0.85);
+  --color-brand: #E11D48;
+  --color-gain: #16A34A;
+  --color-loss: #EA580C;
+  --color-txt-primary: #0F172A;
+  --color-txt-secondary: #64748B;
+  --color-border-subtle: rgba(0, 0, 0, 0.08);
+}
+
+html.light body {
+  background-color: #F8F9FA;
+  color: #0F172A;
+}
+
+html.light select option {
+  background-color: #FFFFFF;
+  color: #0F172A;
+}
+
+html.light .bg-\[\#141414\],
+html.light .bg-\[\#191919\],
+html.light .bg-\[\#121212\],
+html.light .bg-\[\#1a1a1a\] {
+  background-color: #FFFFFF !important;
+  color: #0F172A;
+}
+
 html {
   background-color: var(--color-base);
   color: var(--color-txt-primary);
@@ -69,6 +98,11 @@ select option {
   to { transform: scale(1) translateY(0); opacity: 1; }
 }
 
+@keyframes slideUpBottom {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
 .animate-fade-in {
   animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
@@ -76,4 +110,15 @@ select option {
 .animate-slide-up-scale {
   animation: slideUpScale 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
+
+.animate-slide-up-bottom {
+  animation: slideUpBottom 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+body.modal-open #bottom-nav,
+body.modal-open .fab-container {
+  display: none !important;
+}
+
+
 
