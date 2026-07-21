@@ -1,7 +1,7 @@
 import { createContext, useContext, useReducer, useEffect, type ReactNode } from 'react';
 import type { AppState, AppAction, FundSnapshot } from '../types';
 import { initialState } from './initialState';
-import { round2 } from '../utils/helpers';
+import { round2, calculateWantsPredictions } from '../utils/helpers';
 import { getStorageService } from '../storage/StorageService';
 
 function snapshotFund(fundId: number, balance: number, snapshots: FundSnapshot[]): FundSnapshot[] {
@@ -385,10 +385,35 @@ interface AppContextType {
   dispatch: React.Dispatch<AppAction>;
 }
 
+function recalculatePredictionsInState(state: AppState): AppState {
+  const wantsFund = state.funds.find((f) => f.name === 'wants');
+  const wantsFundBalance = wantsFund ? wantsFund.balance : 0;
+  const wantsAllocationPct = wantsFund ? wantsFund.allocation_pct : 20;
+
+  const updatedWants = calculateWantsPredictions(
+    state.wants,
+    wantsFundBalance,
+    state.settings.expected_monthly_income,
+    wantsAllocationPct
+  );
+
+  return {
+    ...state,
+    wants: updatedWants,
+  };
+}
+
 const AppContext = createContext<AppContextType | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(appReducer, { ...initialState, loading: true });
+  const [state, dispatch] = useReducer(
+    (s: AppState, a: AppAction) => {
+      const next = appReducer(s, a);
+      if (next.loading) return next;
+      return recalculatePredictionsInState(next);
+    },
+    { ...initialState, loading: true }
+  );
 
   useEffect(() => {
     let cancelled = false;

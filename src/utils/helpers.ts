@@ -1,4 +1,4 @@
-import type { Fund } from '../types';
+import type { Fund, Want } from '../types';
 
 export function round2(n: number): number {
   return Math.round(n * 100) / 100;
@@ -123,3 +123,66 @@ export function getNextInterestDate(
   else if (frequency === 'yearly') now.setFullYear(now.getFullYear() + 1);
   return now.toISOString().split('T')[0];
 }
+
+export function calculateWantsPredictions(
+  wants: Want[],
+  wantsFundBalance: number,
+  expectedMonthlyIncome: number,
+  wantsAllocationPct: number,
+): Want[] {
+  const dailyRate = (expectedMonthlyIncome * (wantsAllocationPct / 100)) / 30.416;
+  let currentPool = wantsFundBalance;
+
+  const pending = wants.filter((w) => !w.purchased);
+
+  const sortedPending = [...pending].sort((a, b) => {
+    if (b.priority !== a.priority) return b.priority - a.priority;
+    return a.id - b.id;
+  });
+
+  let simulatedDays = 0;
+  const predictedPending = sortedPending.map((w) => {
+    const remaining = Math.max(0, w.target_price - w.current_saved);
+    if (remaining <= 0) {
+      return {
+        ...w,
+        days_to_buy: 0,
+        predicted_date: new Date().toISOString().split('T')[0],
+      };
+    }
+
+    if (dailyRate <= 0) {
+      return {
+        ...w,
+        days_to_buy: null,
+        predicted_date: null,
+      };
+    }
+
+    if (currentPool >= remaining) {
+      currentPool -= remaining;
+      return {
+        ...w,
+        days_to_buy: Math.round(simulatedDays),
+        predicted_date: new Date(Date.now() + simulatedDays * 86400000).toISOString().split('T')[0],
+      };
+    } else {
+      const gap = remaining - currentPool;
+      const daysNeeded = gap / dailyRate;
+      simulatedDays += daysNeeded;
+      currentPool = 0;
+      return {
+        ...w,
+        days_to_buy: Math.round(simulatedDays),
+        predicted_date: new Date(Date.now() + simulatedDays * 86400000).toISOString().split('T')[0],
+      };
+    }
+  });
+
+  const predictedMap = new Map(predictedPending.map((w) => [w.id, w]));
+  return wants.map((w) => {
+    if (w.purchased) return w;
+    return predictedMap.get(w.id) || w;
+  });
+}
+
