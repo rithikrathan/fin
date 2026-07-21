@@ -75,9 +75,7 @@ export default function FloatingAddButton({ onClick, actions }: FloatingAddButto
     return (
         <div
             ref={ref}
-            className={`fab-container fixed right-4 z-30 lg:hidden transition-all duration-250 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
-                }`}
-            style={{ bottom: 'max(1.5rem, calc(80px + env(safe-area-inset-bottom, 0px)))' }}
+            className={`fab-container fixed right-4 bottom-6 z-30 lg:hidden transition-all duration-250 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}
         >
             {open && actions && (
                 <>
