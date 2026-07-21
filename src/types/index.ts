@@ -106,6 +106,7 @@ export interface Need {
   notes: string;
   active: boolean;
   reapproval_required: boolean;
+  balance_account_id?: string;
 }
 
 export type AssetType = 'stock' | 'mutual_fund' | 'fd' | 'ppf' | 'crypto' | 'other';
@@ -170,6 +171,7 @@ export interface Settings {
   cooling_off_hours: number;
   waterfall_priority: number[];
   theme_mode?: 'system' | 'light' | 'dark';
+  animations_enabled?: boolean;
 }
 
 export interface FieldSelector {
@@ -227,6 +229,37 @@ export interface DetectedTransaction {
   created_transaction_id: number | null;
 }
 
+export type BalanceStatus = 'Pending' | 'Partially Paid' | 'Paid';
+export type BalanceTxType = 'Addition' | 'Subtraction';
+
+export interface BalanceLineItem {
+  id: string;
+  transaction_id: string;
+  item_name: string;
+  count_qty: number;
+  unit_cost: number;
+  line_total: number;
+}
+
+export interface BalanceTransaction {
+  id: string;
+  account_id: string;
+  type: BalanceTxType;
+  transaction_total: number;
+  date: string;
+  reference_number?: string;
+  notes?: string;
+  line_items?: BalanceLineItem[];
+}
+
+export interface BalanceAccount {
+  id: string;
+  title: string;
+  total_due: number;
+  status: BalanceStatus;
+  created_at: string;
+}
+
 export interface AppState {
   funds: Fund[];
   milestones: Milestone[];
@@ -241,6 +274,9 @@ export interface AppState {
   message_patterns: MessagePattern[];
   sms_logs: SmsLog[];
   detected_transactions: DetectedTransaction[];
+  balance_accounts: BalanceAccount[];
+  balance_transactions: BalanceTransaction[];
+  balance_line_items: BalanceLineItem[];
   loading: boolean;
 }
 
@@ -281,6 +317,12 @@ export type AppAction =
   | { type: 'ADD_DETECTED_TX'; payload: DetectedTransaction }
   | { type: 'UPDATE_DETECTED_TX'; payload: DetectedTransaction }
   | { type: 'REMOVE_DETECTED_TX'; payload: string }
+  | { type: 'ADD_BALANCE_ACCOUNT'; payload: BalanceAccount }
+  | { type: 'UPDATE_BALANCE_ACCOUNT'; payload: BalanceAccount }
+  | { type: 'REMOVE_BALANCE_ACCOUNT'; payload: string }
+  | { type: 'RESET_BALANCE_ACCOUNT'; payload: string }
+  | { type: 'ADD_BALANCE_TRANSACTION'; payload: { transaction: BalanceTransaction; line_items?: BalanceLineItem[] } }
+  | { type: 'REMOVE_BALANCE_TRANSACTION'; payload: { transaction_id: string; account_id: string } }
   | { type: 'LOAD_DATA'; payload: AppState }
   | { type: 'DELETE_ALL' }
   | { type: 'SET_LOADING'; payload: boolean };
