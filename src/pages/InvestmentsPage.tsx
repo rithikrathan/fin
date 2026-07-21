@@ -198,7 +198,7 @@ function InvestmentForm({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Reliance Industries"
-            className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
+            className="w-full bg-white/[0.04] border border-border-subtle rounded-xl px-4 py-3 text-base text-txt-primary placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
           />
         </div>
         <div>
@@ -206,7 +206,7 @@ function InvestmentForm({
           <select
             value={assetType}
             onChange={(e) => setAssetType(e.target.value as AssetType)}
-            className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary outline-none focus:border-brand/50 transition-colors"
+            className="w-full bg-white/[0.04] border border-border-subtle rounded-xl px-4 py-3 text-base text-txt-primary outline-none focus:border-brand/50 transition-colors"
           >
             {Object.entries(assetTypeLabels).map(([k, v]) => (
               <option key={k} value={k}>
@@ -224,7 +224,7 @@ function InvestmentForm({
               onChange={(e) => setInvested(e.target.value)}
               placeholder="0"
               min="0"
-              className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary font-mono placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
+              className="w-full bg-white/[0.04] border border-border-subtle rounded-xl px-4 py-3 text-base text-txt-primary font-mono placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
             />
           </div>
           <div>
@@ -235,7 +235,7 @@ function InvestmentForm({
               onChange={(e) => setCurrent(e.target.value)}
               placeholder="0"
               min="0"
-              className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary font-mono placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
+              className="w-full bg-white/[0.04] border border-border-subtle rounded-xl px-4 py-3 text-base text-txt-primary font-mono placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
             />
           </div>
         </div>
@@ -245,7 +245,7 @@ function InvestmentForm({
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary outline-none focus:border-brand/50 transition-colors"
+            className="w-full bg-white/[0.04] border border-border-subtle rounded-xl px-4 py-3 text-base text-txt-primary outline-none focus:border-brand/50 transition-colors"
           />
         </div>
         <div>
@@ -254,7 +254,7 @@ function InvestmentForm({
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Optional"
-            className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
+            className="w-full bg-white/[0.04] border border-border-subtle rounded-xl px-4 py-3 text-base text-txt-primary placeholder:text-txt-secondary/50 outline-none focus:border-brand/50 transition-colors"
           />
         </div>
         <div className="flex justify-end gap-2 pt-2">

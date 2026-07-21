@@ -327,10 +327,10 @@ function WantForm({
                 key={p}
                 type="button"
                 onClick={() => setPriority(p)}
-                className={`flex-1 py-3 rounded-xl text-sm font-medium border transition-all cursor-pointer ${
+                className={`flex-1 py-3 rounded-xl text-sm font-semibold border transition-all transform duration-150 active:scale-95 cursor-pointer ${
                   priority === p
                     ? `${priorityColors[p]} border-current`
-                    : 'bg-white/[0.02] border-border-subtle text-txt-secondary'
+                    : 'bg-white/[0.02] border-border-subtle text-txt-secondary hover:text-txt-primary hover:bg-white/[0.04]'
                 }`}
               >
                 {priorityLabels[p]}

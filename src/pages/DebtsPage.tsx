@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import type { Debt } from '../types';
 import { formatCurrency, generateId, round2 } from '../utils/helpers';
@@ -32,6 +32,14 @@ export default function DebtsPage() {
   const [formOpen, setFormOpen] = useState(false);
   const [editDebt, setEditDebt] = useState<Debt | null>(null);
   const [payoffDebt, setPayoffDebt] = useState<Debt | null>(null);
+
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const activeDebts = state.debts.filter((d) => d.active);
   const closedDebts = state.debts.filter((d) => !d.active);
@@ -95,11 +103,11 @@ export default function DebtsPage() {
       {paydownData.length > 0 && (
         <Card className="p-6">
           <h3 className="text-lg font-bold text-txt-primary mb-4">Debt Paydown Projection</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={paydownData}>
+          <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>
+            <AreaChart data={paydownData} margin={{ top: 10, right: isMobile ? 15 : 30, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-              <XAxis dataKey="month" tick={{ fill: AXIS_COLOR, fontSize: 11 }} />
-              <YAxis tick={{ fill: AXIS_COLOR, fontSize: 11 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
+              <XAxis dataKey="month" tick={{ fill: AXIS_COLOR, fontSize: 10 }} interval={isMobile ? 2 : 0} />
+              <YAxis tick={{ fill: AXIS_COLOR, fontSize: 10 }} width={isMobile ? 40 : 60} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}k`} />
               <Tooltip content={<ChartTooltip />} />
               <Area type="monotone" dataKey="balance" name="Remaining" stroke="#FB923C" fill="#FB923C" fillOpacity={0.15} />
               <Area type="monotone" dataKey="interest" name="Total Interest" stroke="#EF4444" fill="#EF4444" fillOpacity={0.1} />

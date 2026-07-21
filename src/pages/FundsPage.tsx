@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { formatCurrency, round2 } from '../utils/helpers';
@@ -18,6 +18,14 @@ import {
 export default function FundsPage() {
   const { state, dispatch } = useApp();
   const navigate = useNavigate();
+
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const [configOpen, setConfigOpen] = useState(false);
   const [transferOpen, setTransferOpen] = useState(false);
   const [redistributeOpen, setRedistributeOpen] = useState(false);
@@ -77,8 +85,8 @@ export default function FundsPage() {
                   data={pieData}
                   cx="50%"
                   cy="50%"
-                  innerRadius={70}
-                  outerRadius={110}
+                  innerRadius={isMobile ? 50 : 70}
+                  outerRadius={isMobile ? 85 : 110}
                   paddingAngle={3}
                   dataKey="value"
                   stroke="none"

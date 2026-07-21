@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { formatCurrency, formatDate, getROI } from '../utils/helpers';
 import Card from '../components/shared/Card';
+import { HomeIcon } from '../components/shared/Icons';
 
 export default function HomePage() {
     const { state } = useApp();
@@ -33,19 +34,19 @@ export default function HomePage() {
     if (!hasData) {
         return (
             <div className="max-w-5xl mx-auto">
-                <div className="flex flex-col items-center justify-center py-32 text-center">
-                    <div className="h-20 w-20 rounded-2xl bg-brand/10 shadow-glow-lg flex items-center justify-center text-4xl mb-8">
-                        ◉
+                <div className="flex flex-col items-center justify-center py-24 sm:py-32 text-center px-4">
+                    <div className="h-20 w-20 rounded-2xl bg-brand/10 border border-brand/20 shadow-glow-lg flex items-center justify-center text-brand mb-8 animate-pulse">
+                        <HomeIcon className="w-10 h-10" />
                     </div>
-                    <h1 className="text-2xl sm:text-4xl font-bold text-txt-primary mb-4">
+                    <h1 className="text-3xl sm:text-4xl font-bold text-txt-primary mb-4 tracking-tight">
                         Welcome to Fin
                     </h1>
-                    <p className="text-base sm:text-lg text-txt-secondary max-w-md mb-10 leading-relaxed px-4">
-                        Track your income, split into funds, and manage expenses. Start by adding your first transaction.
+                    <p className="text-base sm:text-lg text-txt-secondary max-w-md mb-8 leading-relaxed">
+                        Track your income, split into needs/wants/savings funds, and log expenses. Start by adding your first transaction.
                     </p>
                     <button
                         onClick={() => navigate('/transactions')}
-                        className="px-6 sm:px-8 py-3 sm:py-4 rounded-2xl bg-brand text-white text-lg sm:text-xl font-bold shadow-glow hover:bg-brand/90 transition-all cursor-pointer"
+                        className="px-6 sm:px-8 py-3.5 sm:py-4 rounded-xl bg-brand text-white text-base sm:text-lg font-bold shadow-glow hover:bg-brand/90 transition-all cursor-pointer active:scale-95 min-h-[48px]"
                     >
                         + Add Your First Transaction
                     </button>
@@ -146,12 +147,27 @@ export default function HomePage() {
                                 <div key={tx.id} className="flex items-center justify-between">
                                     <div className="flex items-center gap-4 min-w-0">
                                         <div
-                                            className={`h-10 w-10 rounded-xl flex items-center justify-center text-sm shrink-0 ${tx.type === 'income'
-                                                    ? 'bg-gain/10 text-gain'
-                                                    : 'bg-loss/10 text-loss'
-                                                }`}
+                                            className={`h-10 w-10 rounded-xl flex items-center justify-center shrink-0 ${
+                                                tx.type === 'income'
+                                                    ? 'bg-gain/10 text-gain border border-gain/20'
+                                                    : tx.type === 'expense'
+                                                    ? 'bg-loss/10 text-loss border border-loss/20'
+                                                    : 'bg-brand/10 text-brand border border-brand/20'
+                                            }`}
                                         >
-                                            {tx.type === 'income' ? '↗' : '↙'}
+                                            {tx.type === 'income' ? (
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="m4.5 19.5 15-15m0 0H8.25m11.25 0v11.25" />
+                                                </svg>
+                                            ) : tx.type === 'expense' ? (
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 4.5-15 15m0 0h11.25m-11.25 0V8.25" />
+                                                </svg>
+                                            ) : (
+                                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-5 h-5">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21 3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                                                </svg>
+                                            )}
                                         </div>
                                         <div className="min-w-0">
                                             <div className="text-base text-txt-primary truncate font-medium">
@@ -163,10 +179,11 @@ export default function HomePage() {
                                         </div>
                                     </div>
                                     <div
-                                        className={`font-mono text-lg font-bold shrink-0 ml-4 ${tx.type === 'income' ? 'text-gain' : 'text-loss'
-                                            }`}
+                                        className={`font-mono text-lg font-bold shrink-0 ml-4 ${
+                                            tx.type === 'income' ? 'text-gain' : tx.type === 'expense' ? 'text-loss' : 'text-txt-secondary'
+                                        }`}
                                     >
-                                        {tx.type === 'income' ? '+' : '-'}
+                                        {tx.type === 'income' ? '+' : tx.type === 'expense' ? '-' : ''}
                                         {formatCurrency(tx.amount)}
                                     </div>
                                 </div>

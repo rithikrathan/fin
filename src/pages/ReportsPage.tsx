@@ -132,9 +132,9 @@ export default function ReportsPage() {
             <button
               key={t}
               onClick={() => setReportType(t)}
-              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-sm sm:text-base font-medium transition-all cursor-pointer ${
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl text-sm sm:text-base font-semibold transition-all transform duration-150 active:scale-95 cursor-pointer ${
                 reportType === t
-                  ? 'bg-brand/15 text-brand'
+                  ? 'bg-brand/15 text-brand border border-brand/20 shadow-glow'
                   : 'text-txt-secondary hover:text-txt-primary hover:bg-white/[0.04]'
               }`}
             >

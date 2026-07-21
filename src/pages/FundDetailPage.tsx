@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import type { Milestone } from '../types';
@@ -24,6 +24,14 @@ export default function FundDetailPage() {
   const navigate = useNavigate();
   const { state, dispatch } = useApp();
   const [milestoneOpen, setMilestoneOpen] = useState(false);
+
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const fundId = Number(id);
   const fund = state.funds.find((f) => f.id === fundId);
@@ -268,8 +276,8 @@ export default function FundDetailPage() {
               <span className="text-sm font-normal text-txt-secondary ml-2">+ 12-month projection</span>
             )}
           </h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <ComposedChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 10 }}>
+          <ResponsiveContainer width="100%" height={isMobile ? 220 : 300}>
+            <ComposedChart data={chartData} margin={{ top: 10, right: isMobile ? 15 : 30, left: 0, bottom: 10 }}>
               <defs>
                 <linearGradient id={`grad-${fund.id}`} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor={fund.color} stopOpacity={0.35} />
@@ -281,14 +289,14 @@ export default function FundDetailPage() {
                 dataKey="date"
                 tickFormatter={(d: string) => new Date(d).toLocaleDateString('en-IN', { month: 'short', year: '2-digit' })}
                 stroke="#A1A1AA"
-                tick={{ fontSize: 12 }}
-                interval="preserveStartEnd"
+                tick={{ fontSize: 10 }}
+                interval={isMobile ? 2 : 0}
               />
               <YAxis
                 tickFormatter={(v: number) => v >= 1000 ? `₹${(v / 1000).toFixed(0)}k` : `₹${v}`}
                 stroke="#A1A1AA"
-                tick={{ fontSize: 12 }}
-                width={60}
+                tick={{ fontSize: 10 }}
+                width={isMobile ? 40 : 60}
               />
               <Tooltip
                 formatter={(value, name) => value != null ? [formatCurrency(Number(value)), name] : ['', '']}

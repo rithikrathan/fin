@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { formatCurrency, formatDate } from '../utils/helpers';
 import Card from '../components/shared/Card';
@@ -30,7 +31,7 @@ function projectWantsFund(
   wantsPct: number,
   months: number,
   startDate: Date,
-  pendingWants: { name: string; target_price: number; predicted_date: string | null }[],
+  pendingWants: { name: string; target_price: number; current_saved: number; predicted_date: string | null }[],
 ): ProjectionPoint[] {
   const monthlyAdd = monthlyIncome * (wantsPct / 100);
   const points: ProjectionPoint[] = [];
@@ -40,20 +41,30 @@ function projectWantsFund(
     if (!w.predicted_date) continue;
     const predDate = new Date(w.predicted_date);
     const diffMonths =
-      (predDate.getTime() - startDate.getTime()) / (30 * 24 * 60 * 60 * 1000);
+      (predDate.getTime() - startDate.getTime()) / (30.416 * 24 * 60 * 60 * 1000);
     const month = Math.max(0, Math.round(diffMonths));
     if (!wantsByMonth.has(month)) wantsByMonth.set(month, []);
     wantsByMonth.get(month)!.push({ name: w.name, value: w.target_price });
   }
 
+  let runningBalance = currentBalance;
   for (let i = 0; i <= months; i++) {
     const d = new Date(startDate);
     d.setMonth(d.getMonth() + i);
+
+    if (i > 0) {
+      runningBalance += monthlyAdd;
+    }
+
+    const targets = wantsByMonth.get(i) || [];
+    const totalDeducted = targets.reduce((sum, item) => sum + item.value, 0);
+    runningBalance = Math.max(0, runningBalance - totalDeducted);
+
     points.push({
       date: d.toISOString().split('T')[0],
-      balance: Math.round(currentBalance + monthlyAdd * i),
+      balance: Math.round(runningBalance),
       month: i,
-      targets: wantsByMonth.get(i) || [],
+      targets,
     });
   }
   return points;
@@ -83,6 +94,15 @@ const CustomTooltip = ({
 
 export default function DashboardPage() {
   const { state } = useApp();
+  const navigate = useNavigate();
+
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 640);
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const totalBalance = state.funds.reduce((s, f) => s + f.balance, 0);
   const totalCurrentValue = state.investments.reduce((s, i) => s + i.current_value, 0);
@@ -109,6 +129,8 @@ export default function DashboardPage() {
   const wantsFund = state.funds.find((f) => f.name === 'wants');
   const pendingWants = state.wants.filter((w) => !w.purchased);
 
+  const monthlyIncomeSource = state.settings.expected_monthly_income || avgMonthlyIncome || 80000;
+
   const chartData = useMemo(() => {
     if (!wantsFund) return { projection: [] as ProjectionPoint[], maxMonths: 12 };
     const now = new Date();
@@ -116,13 +138,13 @@ export default function DashboardPage() {
       if (!w.predicted_date) return max;
       const diff =
         (new Date(w.predicted_date).getTime() - now.getTime()) /
-        (30 * 24 * 60 * 60 * 1000);
+        (30.416 * 24 * 60 * 60 * 1000);
       return Math.max(max, Math.ceil(diff) + 2);
     }, 12);
 
     const projection = projectWantsFund(
       wantsFund.balance,
-      avgMonthlyIncome,
+      monthlyIncomeSource,
       wantsFund.allocation_pct,
       maxPredMonth,
       now,
@@ -130,7 +152,7 @@ export default function DashboardPage() {
     );
 
     return { projection, maxMonths: maxPredMonth };
-  }, [wantsFund, avgMonthlyIncome, pendingWants]);
+  }, [wantsFund, monthlyIncomeSource, pendingWants]);
 
   const allTargetValues = pendingWants.map((w) => w.target_price);
 
@@ -230,10 +252,10 @@ export default function DashboardPage() {
             Add income and wants to see projections
           </div>
         ) : (
-          <ResponsiveContainer width="100%" height={420}>
+          <ResponsiveContainer width="100%" height={isMobile ? 280 : 420}>
             <ComposedChart
               data={chartData.projection}
-              margin={{ top: 20, right: 30, left: 0, bottom: 10 }}
+              margin={{ top: 20, right: isMobile ? 15 : 30, left: 0, bottom: 10 }}
             >
               <defs>
                 <linearGradient id="wantsGradient" x1="0" y1="0" x2="0" y2="1">
@@ -252,16 +274,16 @@ export default function DashboardPage() {
                   });
                 }}
                 stroke="#A1A1AA"
-                tick={{ fontSize: 12 }}
-                interval="preserveStartEnd"
+                tick={{ fontSize: 10 }}
+                interval={isMobile ? 2 : 0}
               />
               <YAxis
                 tickFormatter={(v: number) =>
                   v >= 1000 ? `₹${(v / 1000).toFixed(0)}k` : `₹${v}`
                 }
                 stroke="#A1A1AA"
-                tick={{ fontSize: 12 }}
-                width={60}
+                tick={{ fontSize: 10 }}
+                width={isMobile ? 40 : 60}
               />
               <Tooltip content={<CustomTooltip />} />
 
@@ -277,21 +299,37 @@ export default function DashboardPage() {
                   const { cx, cy, payload } = props;
                   if (cx == null || cy == null || !payload) return null;
                   if (payload.targets.length > 0) {
+                    const isEven = payload.month % 2 === 0;
                     return (
-                      <g key={`dot-${payload.date}`}>
+                      <g
+                        key={`dot-${payload.date}`}
+                        className="cursor-pointer active:scale-95 transition-all select-none"
+                        onClick={() => navigate('/funds/wants')}
+                      >
                         <circle cx={cx} cy={cy} r={4} fill="#A78BFA" stroke="#050505" strokeWidth={2} />
-                        {payload.targets.map((t: { name: string; value: number }, i: number) => (
-                          <g key={i}>
-                            <circle cx={cx} cy={cy} r={12} fill="none" stroke="#FF2A2A" strokeWidth={2} strokeDasharray="3 3" />
-                            <circle cx={cx} cy={cy} r={5} fill="#FF2A2A" />
-                            <text x={cx} y={cy - 18} textAnchor="middle" fill="#F4F4F5" fontSize={11} fontFamily="Inter" fontWeight={600}>
-                              {t.name}
+                        <circle cx={cx} cy={cy} r={isMobile ? 8 : 12} fill="none" stroke="#FF2A2A" strokeWidth={2} strokeDasharray="3 3" />
+                        <circle cx={cx} cy={cy} r={isMobile ? 3.5 : 5} fill="#FF2A2A" />
+                        {payload.targets.map((t: { name: string; value: number }, i: number) => {
+                          const label = `${t.name} (${t.value >= 1000 ? `₹${(t.value / 1000).toFixed(0)}k` : `₹${t.value}`})`;
+                          const offset = i * (isMobile ? 12 : 16);
+                          const textY = isEven
+                            ? cy - (isMobile ? 14 : 20) - offset
+                            : cy + (isMobile ? 22 : 30) + offset;
+                          return (
+                            <text
+                              key={i}
+                              x={cx}
+                              y={textY}
+                              textAnchor="middle"
+                              fill={isEven ? "#F4F4F5" : "#A78BFA"}
+                              fontSize={isMobile ? 8 : 10}
+                              fontFamily="Inter"
+                              fontWeight={600}
+                            >
+                              {label}
                             </text>
-                            <text x={cx} y={cy - 6} textAnchor="middle" fill="#FF2A2A" fontSize={10} fontFamily="JetBrains Mono" fontWeight={500}>
-                              {formatCurrency(t.value)}
-                            </text>
-                          </g>
-                        ))}
+                          );
+                        })}
                       </g>
                     );
                   }
@@ -375,10 +413,10 @@ export default function DashboardPage() {
               <button
                 key={m}
                 onClick={() => setCashFlowMonths(m)}
-                className={`px-3 py-1 rounded-lg text-xs font-medium border transition-all cursor-pointer ${
+                className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all transform duration-150 active:scale-95 cursor-pointer ${
                   cashFlowMonths === m
-                    ? 'bg-brand/15 border-brand/30 text-brand'
-                    : 'bg-white/[0.02] border-border-subtle text-txt-secondary hover:text-txt-primary'
+                    ? 'bg-brand/15 border-brand/30 text-brand shadow-glow'
+                    : 'bg-white/[0.02] border-border-subtle text-txt-secondary hover:text-txt-primary hover:bg-white/[0.04]'
                 }`}
               >
                 {m}m
@@ -386,15 +424,15 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
-        <ResponsiveContainer width="100%" height={280}>
+        <ResponsiveContainer width="100%" height={isMobile ? 220 : 280}>
           <BarChart data={cashFlowData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-            <XAxis dataKey="month" stroke="#A1A1AA" tick={{ fontSize: 12 }} />
+            <XAxis dataKey="month" stroke="#A1A1AA" tick={{ fontSize: 10 }} />
             <YAxis
               tickFormatter={(v: number) => (v >= 1000 ? `₹${(v / 1000).toFixed(0)}k` : `₹${v}`)}
               stroke="#A1A1AA"
-              tick={{ fontSize: 12 }}
-              width={60}
+              tick={{ fontSize: 10 }}
+              width={isMobile ? 40 : 60}
             />
             <Tooltip content={<CustomTooltip />} />
             <Bar dataKey="income" name="Income" fill="#4ADE80" radius={[4, 4, 0, 0]} />
@@ -428,7 +466,7 @@ export default function DashboardPage() {
             </div>
           )}
         </div>
-        <ResponsiveContainer width="100%" height={280}>
+        <ResponsiveContainer width="100%" height={isMobile ? 220 : 280}>
           <ComposedChart data={burnRateData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="burnGradient" x1="0" y1="0" x2="0" y2="1">
@@ -437,12 +475,12 @@ export default function DashboardPage() {
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-            <XAxis dataKey="month" stroke="#A1A1AA" tick={{ fontSize: 12 }} />
+            <XAxis dataKey="month" stroke="#A1A1AA" tick={{ fontSize: 10 }} />
             <YAxis
               tickFormatter={(v: number) => (v >= 1000 ? `₹${(v / 1000).toFixed(0)}k` : `₹${v}`)}
               stroke="#A1A1AA"
-              tick={{ fontSize: 12 }}
-              width={60}
+              tick={{ fontSize: 10 }}
+              width={isMobile ? 40 : 60}
             />
             <Tooltip content={<CustomTooltip />} />
             <ReferenceLine y={0} stroke="rgba(255,42,42,0.3)" strokeDasharray="6 4" />

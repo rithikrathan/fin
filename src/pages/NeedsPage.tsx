@@ -56,9 +56,9 @@ export default function NeedsPage() {
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-4 py-2 rounded-xl text-base font-medium transition-all cursor-pointer ${
+              className={`px-4 py-2 rounded-xl text-base font-semibold transition-all transform duration-150 active:scale-95 cursor-pointer ${
                 tab === t
-                  ? 'bg-brand/15 text-brand'
+                  ? 'bg-brand/15 text-brand border border-brand/20 shadow-glow'
                   : 'text-txt-secondary hover:text-txt-primary hover:bg-white/[0.04]'
               }`}
             >
@@ -239,10 +239,10 @@ function NeedForm({
           <button
             type="button"
             onClick={() => setRecurring(true)}
-            className={`flex-1 py-3 rounded-xl text-base font-medium border transition-all cursor-pointer ${
+            className={`flex-1 py-3 rounded-xl text-base font-semibold border transition-all transform duration-150 active:scale-95 cursor-pointer ${
               recurring
-                ? 'bg-brand/10 border-brand/30 text-brand'
-                : 'bg-white/[0.02] border-border-subtle text-txt-secondary hover:text-txt-primary'
+                ? 'bg-brand/10 border-brand/30 text-brand shadow-glow'
+                : 'bg-white/[0.02] border-border-subtle text-txt-secondary hover:text-txt-primary hover:bg-white/[0.04]'
             }`}
           >
             Recurring
@@ -250,10 +250,10 @@ function NeedForm({
           <button
             type="button"
             onClick={() => setRecurring(false)}
-            className={`flex-1 py-3 rounded-xl text-base font-medium border transition-all cursor-pointer ${
+            className={`flex-1 py-3 rounded-xl text-base font-semibold border transition-all transform duration-150 active:scale-95 cursor-pointer ${
               !recurring
-                ? 'bg-brand/10 border-brand/30 text-brand'
-                : 'bg-white/[0.02] border-border-subtle text-txt-secondary hover:text-txt-primary'
+                ? 'bg-brand/10 border-brand/30 text-brand shadow-glow'
+                : 'bg-white/[0.02] border-border-subtle text-txt-secondary hover:text-txt-primary hover:bg-white/[0.04]'
             }`}
           >
             One-Time
