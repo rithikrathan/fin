@@ -202,7 +202,7 @@ export default function SettingsPage() {
                             </div>
                         </div>
                         <Button variant="danger" onClick={() => setDeleteOpen(true)}>
-                            Delete All
+                            Delete
                         </Button>
                     </div>
                 </div>
