@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { formatCurrency, round2 } from '../utils/helpers';
@@ -6,6 +7,7 @@ import Button from '../components/shared/Button';
 import Modal from '../components/shared/Modal';
 import SurplusRedistributeModal from '../components/funds/SurplusRedistributeModal';
 import FundTransferModal from '../components/funds/FundTransferModal';
+import { ChevronRight } from 'lucide-react';
 import {
   PieChart,
   Pie,
@@ -255,7 +257,7 @@ export default function FundsPage() {
       {/* Quick links as flat outline dividers */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
         <div
-          className="p-4 border border-white/[0.06] bg-white/[0.01] rounded-xl cursor-pointer hover:border-white/10 transition-colors flex items-center justify-between"
+          className="group p-4 border border-white/[0.06] bg-white/[0.01] hover:bg-white/[0.04] rounded-xl cursor-pointer hover:border-white/10 transition-all flex items-center justify-between shadow-sm"
           onClick={() => navigate('/wants')}
         >
           <div>
@@ -266,11 +268,11 @@ export default function FundsPage() {
               {state.wants.length} Items ({pendingWants} pending)
             </div>
           </div>
-          <span className="text-xl text-txt-secondary/30 font-mono">→</span>
+          <ChevronRight className="w-5 h-5 text-txt-secondary/50 group-hover:text-purple-400 group-hover:translate-x-1 transition-all" />
         </div>
 
         <div
-          className="p-4 border border-white/[0.06] bg-white/[0.01] rounded-xl cursor-pointer hover:border-white/10 transition-colors flex items-center justify-between"
+          className="group p-4 border border-white/[0.06] bg-white/[0.01] hover:bg-white/[0.04] rounded-xl cursor-pointer hover:border-white/10 transition-all flex items-center justify-between shadow-sm"
           onClick={() => navigate('/needs')}
         >
           <div>
@@ -281,11 +283,11 @@ export default function FundsPage() {
               {state.needs.length} Items ({activeNeeds} active)
             </div>
           </div>
-          <span className="text-xl text-txt-secondary/30 font-mono">→</span>
+          <ChevronRight className="w-5 h-5 text-txt-secondary/50 group-hover:text-loss group-hover:translate-x-1 transition-all" />
         </div>
 
         <div
-          className="p-4 border border-white/[0.06] bg-white/[0.01] rounded-xl cursor-pointer hover:border-white/10 transition-colors flex items-center justify-between"
+          className="group p-4 border border-white/[0.06] bg-white/[0.01] hover:bg-white/[0.04] rounded-xl cursor-pointer hover:border-white/10 transition-all flex items-center justify-between shadow-sm"
           onClick={() => navigate('/funds/manage')}
         >
           <div>
@@ -296,7 +298,7 @@ export default function FundsPage() {
               {state.funds.length} Active Funds
             </div>
           </div>
-          <span className="text-xl text-txt-secondary/30 font-mono">→</span>
+          <ChevronRight className="w-5 h-5 text-txt-secondary/50 group-hover:text-brand group-hover:translate-x-1 transition-all" />
         </div>
       </div>
 
@@ -517,10 +519,12 @@ function ConfigModal({
           </Button>
         </div>
       </div>
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-[200] px-5 py-3 rounded-xl bg-surface/95 backdrop-blur-md border border-border-subtle text-base text-txt-primary shadow-2xl">
-          {toast}
-        </div>
+      {toast && createPortal(
+        <div className="fixed left-1/2 -translate-x-1/2 bottom-[calc(84px+env(safe-area-inset-bottom,8px))] lg:bottom-6 z-[99999] px-3.5 py-1.5 rounded-full bg-[#18181B]/95 backdrop-blur-md border border-white/15 text-xs font-semibold text-txt-primary shadow-2xl flex items-center gap-2 pointer-events-none whitespace-nowrap animate-fadeIn">
+          <span className="w-1.5 h-1.5 rounded-full bg-brand shrink-0 animate-pulse" />
+          <span>{toast}</span>
+        </div>,
+        document.body
       )}
     </Modal>
   );

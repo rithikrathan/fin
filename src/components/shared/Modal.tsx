@@ -57,24 +57,33 @@ export default function Modal({
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY;
+    touchCurrentY.current = e.touches[0].clientY;
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
+    const el = e.currentTarget as HTMLElement;
     touchCurrentY.current = e.touches[0].clientY;
+
+    if (el.scrollTop > 0) {
+      touchStartY.current = touchCurrentY.current;
+      el.style.transform = '';
+      return;
+    }
+
     const deltaY = touchCurrentY.current - touchStartY.current;
-    
     if (deltaY > 0) {
-      const el = e.currentTarget as HTMLElement;
       el.style.transform = `translateY(${deltaY}px)`;
+    } else {
+      el.style.transform = '';
     }
   };
 
   const handleTouchEnd = (e: React.TouchEvent) => {
-    const deltaY = touchCurrentY.current - touchStartY.current;
     const el = e.currentTarget as HTMLElement;
+    const deltaY = touchCurrentY.current - touchStartY.current;
     el.style.transform = '';
 
-    if (deltaY > 100) {
+    if (deltaY > 100 && el.scrollTop <= 0) {
       handleClose();
     }
     touchStartY.current = 0;

@@ -40,13 +40,19 @@ export default function Header() {
 
     const iconSrc = isLight ? '/icon-red.svg' : '/icon.svg';
 
+    const triggerSplash = () => {
+        window.dispatchEvent(new CustomEvent('show_splash_screen'));
+    };
+
     return (
         <header className="sticky top-0 z-30 min-h-[5rem] py-4 pt-[calc(1rem+env(safe-area-inset-top,0px))] bg-surface/80 backdrop-blur-md border-b border-border-subtle flex items-center px-4 sm:px-8">
             <div className="flex items-center gap-3 min-w-0">
                 <img
                     src={iconSrc}
                     alt="Fin Logo"
-                    className="w-9 h-9 rounded-xl shrink-0 shadow-[0_0_15px_rgba(255,42,42,0.35)] object-cover"
+                    onClick={triggerSplash}
+                    title="Click to view Splash Screen"
+                    className="w-9 h-9 rounded-xl shrink-0 shadow-[0_0_15px_rgba(255,42,42,0.35)] object-cover cursor-pointer hover:scale-105 active:scale-95 transition-all"
                 />
                 <h1 className="text-2xl sm:text-3xl font-bold font-serif text-txt-primary truncate tracking-tight">{current.title}</h1>
             </div>

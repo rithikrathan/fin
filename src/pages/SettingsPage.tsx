@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useApp } from '../context/AppContext';
 import { getStorageService } from '../storage/StorageService';
 import { saveAs } from 'file-saver';
@@ -7,6 +8,7 @@ import { round2 } from '../utils/helpers';
 import Button from '../components/shared/Button';
 import Modal from '../components/shared/Modal';
 import PatternBuilder from '../components/messages/PatternBuilder';
+import Select from '../components/shared/Select';
 
 export default function SettingsPage() {
     const { state, dispatch } = useApp();
@@ -21,11 +23,49 @@ export default function SettingsPage() {
     };
 
     const exportData = async () => {
-        const { loading, ...data } = state;
-        const svc = await getStorageService();
-        const blob = await svc.exportZip(data);
-        saveAs(blob, `finmanager-backup-${new Date().toISOString().split('T')[0]}.zip`);
-        showToast('Data exported');
+        try {
+            const { loading, ...data } = state;
+            const svc = await getStorageService();
+            const blob = await svc.exportZip(data);
+            const filename = `finmanager-backup-${new Date().toISOString().split('T')[0]}.zip`;
+            const file = new File([blob], filename, { type: 'application/zip' });
+
+            // On Android / mobile WebViews, try native Web Share API with File payload
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                try {
+                    await navigator.share({
+                        files: [file],
+                        title: 'Fin Data Backup',
+                        text: 'Fin Personal Finance Manager Backup Data',
+                    });
+                    showToast('Data exported & shared');
+                    return;
+                } catch (err: any) {
+                    if (err.name === 'AbortError') return; // User cancelled share modal
+                }
+            }
+
+            // Fallback: Data URL anchor download for Android WebViews where blob: links are blocked
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const dataUrl = reader.result as string;
+                const a = document.createElement('a');
+                a.href = dataUrl;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => document.body.removeChild(a), 100);
+                showToast('Data exported');
+            };
+            reader.onerror = () => {
+                saveAs(blob, filename);
+                showToast('Data exported');
+            };
+            reader.readAsDataURL(blob);
+        } catch (err) {
+            console.error('Export failed:', err);
+            showToast('Export failed');
+        }
     };
 
     const shareData = async () => {
@@ -91,37 +131,33 @@ export default function SettingsPage() {
                         Appearance & Theme
                     </h3>
                 </div>
-                <p className="text-xs text-txt-secondary">
-                    Choose your preferred theme appearance for the application interface.
-                </p>
-                <div className="grid grid-cols-3 gap-3">
-                    {[
-                        { id: 'system', label: 'System (Default)' },
-                        { id: 'light', label: 'Light' },
-                        { id: 'dark', label: 'Dark' },
-                    ].map((t) => {
-                        const currentTheme = state.settings.theme_mode || 'system';
-                        const isSelected = currentTheme === t.id;
-                        return (
-                            <button
-                                key={t.id}
-                                onClick={() => {
-                                    dispatch({
-                                        type: 'UPDATE_SETTINGS',
-                                        payload: { theme_mode: t.id as 'system' | 'light' | 'dark' },
-                                    });
-                                    showToast(`Theme set to ${t.label}`);
-                                }}
-                                className={`py-3 px-4 rounded-xl border text-sm font-semibold transition-all cursor-pointer ${
-                                    isSelected
-                                        ? 'bg-brand/10 text-brand border-brand/40 shadow-sm'
-                                        : 'bg-white/[0.03] text-txt-secondary border-white/10 hover:text-txt-primary hover:bg-white/[0.06]'
-                                }`}
-                            >
-                                {t.label}
-                            </button>
-                        );
-                    })}
+                <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/10">
+                    <div>
+                        <h4 className="text-sm font-bold text-txt-primary">App Theme</h4>
+                        <p className="text-xs text-txt-secondary mt-0.5">
+                            Choose your preferred theme appearance for the application interface.
+                        </p>
+                    </div>
+                    <Select
+                        value={state.settings.theme_mode || 'system'}
+                        onChange={(val) => {
+                            dispatch({
+                                type: 'UPDATE_SETTINGS',
+                                payload: { theme_mode: val as 'system' | 'light' | 'dark' },
+                            });
+                            const labels: Record<string, string> = {
+                                system: 'System Default',
+                                light: 'Light Mode',
+                                dark: 'Dark Mode',
+                            };
+                            showToast(`Theme set to ${labels[val] || val}`);
+                        }}
+                        options={[
+                            { value: 'system', label: 'System Default' },
+                            { value: 'light', label: 'Light Mode' },
+                            { value: 'dark', label: 'Dark Mode' },
+                        ]}
+                    />
                 </div>
             </div>
 
@@ -161,20 +197,20 @@ export default function SettingsPage() {
                                 Waterfall mode fills Needs baseline first before splitting surplus into Savings & Wants.
                             </p>
                         </div>
-                        <select
+                        <Select
                             value={state.settings.allocation_mode || 'blind'}
-                            onChange={(e) => {
+                            onChange={(val) => {
                                 dispatch({
                                     type: 'UPDATE_SETTINGS',
-                                    payload: { allocation_mode: e.target.value as 'blind' | 'waterfall' },
+                                    payload: { allocation_mode: val as 'blind' | 'waterfall' },
                                 });
-                                showToast(`Allocation mode: ${e.target.value}`);
+                                showToast(`Allocation mode: ${val === 'blind' ? 'Pro-Rata (Default)' : 'Waterfall (Needs First)'}`);
                             }}
-                            className="bg-[#141414] border border-white/20 rounded-lg px-3 py-1.5 text-xs text-txt-primary font-bold outline-none focus:border-brand"
-                        >
-                            <option value="blind">Pro-Rata (Default)</option>
-                            <option value="waterfall">Waterfall (Needs First)</option>
-                        </select>
+                            options={[
+                                { value: 'blind', label: 'Pro-Rata (Default)', description: 'Splits income proportionally based on fund %' },
+                                { value: 'waterfall', label: 'Waterfall (Needs First)', description: 'Fills fixed Needs obligation baseline first' },
+                            ]}
+                        />
                     </div>
 
                     <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/10">
@@ -196,6 +232,24 @@ export default function SettingsPage() {
                             }}
                             className="h-5 w-5 accent-brand cursor-pointer"
                         />
+                    </div>
+
+                    <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/10">
+                        <div>
+                            <h4 className="text-sm font-bold text-txt-primary">Replay Loading Screen</h4>
+                            <p className="text-xs text-txt-secondary mt-0.5">
+                                Preview the initial splash screen with God Particles and Logo Pop-up animation.
+                            </p>
+                        </div>
+                        <button
+                            onClick={() => {
+                                sessionStorage.removeItem('fin_app_loaded');
+                                window.location.href = '/?splash=true';
+                            }}
+                            className="px-3 py-1.5 rounded-lg bg-brand/10 border border-brand/40 text-brand text-xs font-bold hover:bg-brand hover:text-white transition-all cursor-pointer"
+                        >
+                            Play Splash
+                        </button>
                     </div>
                 </div>
             </div>
@@ -371,7 +425,7 @@ export default function SettingsPage() {
                     <Button variant="ghost" onClick={() => setResetTxOpen(false)}>
                         Cancel
                     </Button>
-                    <Button variant="secondary" onClick={resetTransactions}>
+                    <Button variant="danger" onClick={resetTransactions}>
                         Reset Transactions
                     </Button>
                 </div>
@@ -391,10 +445,12 @@ export default function SettingsPage() {
                 </div>
             </Modal>
 
-            {toast && (
-                <div className="fixed bottom-6 right-6 z-[200] px-5 py-3 rounded-xl bg-surface/95 backdrop-blur-md border border-border-subtle text-base text-txt-primary shadow-2xl">
-                    {toast}
-                </div>
+            {toast && createPortal(
+                <div className="fixed left-1/2 -translate-x-1/2 bottom-[calc(84px+env(safe-area-inset-bottom,8px))] lg:bottom-6 z-[99999] px-3.5 py-1.5 rounded-full bg-[#18181B]/95 backdrop-blur-md border border-white/15 text-xs font-semibold text-txt-primary shadow-2xl flex items-center gap-2 pointer-events-none whitespace-nowrap animate-fadeIn">
+                    <span className="w-1.5 h-1.5 rounded-full bg-brand shrink-0 animate-pulse" />
+                    <span>{toast}</span>
+                </div>,
+                document.body
             )}
         </div>
     );

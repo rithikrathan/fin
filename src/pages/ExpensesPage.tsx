@@ -7,6 +7,7 @@ import { formatCurrency, formatDate, generateId, priorityLabels } from '../utils
 import Button from '../components/shared/Button';
 import Modal from '../components/shared/Modal';
 import EmptyState from '../components/shared/EmptyState';
+import Select from '../components/shared/Select';
 import FloatingAddButton from '../components/shared/FloatingAddButton';
 import { Plus, Check, ExternalLink, Sparkles, ArrowLeftRight, ReceiptText, ShoppingBag } from 'lucide-react';
 
@@ -65,7 +66,7 @@ export default function ExpensesPage() {
 
             {/* --- PANEL A: NEEDS TABS --- */}
             {activeTab === 'needs' && (
-                <div className="space-y-6">
+                <div key="needs" className="space-y-6 animate-slide-up-scale">
                     {/* Flattened top summary */}
                     <div className="grid grid-cols-2 divide-x divide-white/[0.06] border-b border-white/[0.06] pb-6 gap-2">
                         <div className="pr-4">
@@ -208,7 +209,7 @@ export default function ExpensesPage() {
 
             {/* --- PANEL B: WANTS TABS --- */}
             {activeTab === 'wants' && (
-                <div className="space-y-6">
+                <div key="wants" className="space-y-6 animate-slide-up-scale">
                     {/* Flattened top summary */}
                     <div className="grid grid-cols-2 divide-x divide-white/[0.06] border-b border-white/[0.06] pb-6 gap-2">
                         <div className="pr-4">
@@ -282,13 +283,13 @@ function CategoryDropdownPortal({ activeTab, navigate }: { activeTab: 'needs' | 
     const targetTab = activeTab === 'needs' ? 'wants' : 'needs';
 
     return createPortal(
-        <div className="fab-container fixed left-4 bottom-20 z-50 lg:hidden">
+        <div className="fab-container fixed left-4 bottom-[calc(84px+env(safe-area-inset-bottom,8px))] z-50 lg:hidden">
             <button
                 onClick={() => navigate(`/expenses?tab=${targetTab}`)}
-                className="group flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#121212] border border-brand/60 text-txt-primary shadow-[0_0_18px_rgba(255,42,42,0.35),inset_0_0_10px_rgba(255,42,42,0.15)] hover:shadow-[0_0_24px_rgba(255,42,42,0.5),inset_0_0_14px_rgba(255,42,42,0.25)] hover:border-brand active:scale-90 transition-all duration-300 backdrop-blur-md cursor-pointer select-none font-bold text-[11px]"
+                className="group flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#121212]/95 border border-brand/60 text-txt-primary shadow-[0_0_18px_rgba(255,42,42,0.35),inset_0_0_10px_rgba(255,42,42,0.15)] hover:shadow-[0_0_24px_rgba(255,42,42,0.5),inset_0_0_14px_rgba(255,42,42,0.25)] hover:border-brand active:scale-95 transition-all duration-300 ease-out backdrop-blur-md cursor-pointer select-none font-bold text-[11px]"
             >
-                <ArrowLeftRight className={`w-3.5 h-3.5 text-brand transition-transform duration-500 ease-out group-hover:rotate-180 ${activeTab === 'wants' ? 'rotate-180' : 'rotate-0'}`} />
-                <span className="capitalize text-txt-primary font-bold tracking-wide">
+                <ArrowLeftRight className={`w-3.5 h-3.5 text-brand transition-transform duration-500 ease-out group-hover:scale-125 ${activeTab === 'wants' ? 'rotate-180' : 'rotate-0'}`} />
+                <span className="capitalize text-txt-primary font-bold tracking-wide transition-opacity duration-300">
                     To {targetTab}
                 </span>
             </button>
@@ -549,17 +550,18 @@ function NeedForm({
                 </div>
 
                 {recurring && (
-                    <div>
-                        <label className="block text-xs text-txt-secondary mb-1.5">Frequency</label>
-                        <select
+                    <div className="flex items-center justify-between gap-3">
+                        <label className="text-xs text-txt-secondary font-medium shrink-0">Frequency</label>
+                        <Select
                             value={frequency}
-                            onChange={(e) => setFrequency(e.target.value as any)}
-                            className="w-full bg-[#121212] border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary outline-none transition-colors"
-                        >
-                            <option value="monthly">Monthly</option>
-                            <option value="weekly">Weekly</option>
-                            <option value="yearly">Yearly</option>
-                        </select>
+                            onChange={(val) => setFrequency(val as any)}
+                            options={[
+                                { value: 'monthly', label: 'Monthly' },
+                                { value: 'weekly', label: 'Weekly' },
+                                { value: 'yearly', label: 'Yearly' },
+                            ]}
+                            buttonClassName="py-2 text-sm font-medium"
+                        />
                     </div>
                 )}
 
@@ -575,19 +577,17 @@ function NeedForm({
                     />
                 </div>
 
-                <div>
-                    <label className="block text-xs text-txt-secondary mb-1.5">Pay From Fund</label>
-                    <select
+                <div className="flex items-center justify-between gap-3">
+                    <label className="text-xs text-txt-secondary font-medium shrink-0">Pay From Fund</label>
+                    <Select
                         value={fundId}
-                        onChange={(e) => setFundId(Number(e.target.value))}
-                        className="w-full bg-[#121212] border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary outline-none transition-colors"
-                    >
-                        {funds.map((f) => (
-                            <option key={f.id} value={f.id}>
-                                {f.name.toUpperCase()} (₹{f.balance.toLocaleString('en-IN')})
-                            </option>
-                        ))}
-                    </select>
+                        onChange={(val) => setFundId(val)}
+                        options={funds.map((f) => ({
+                            value: f.id,
+                            label: `${f.name.toUpperCase()} (₹${f.balance.toLocaleString('en-IN')})`,
+                        }))}
+                        buttonClassName="py-2 text-sm font-medium"
+                    />
                 </div>
 
                 <div className="flex items-center gap-3 py-1">

@@ -3,8 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import Card from '../components/shared/Card';
 import Button from '../components/shared/Button';
+import Select from '../components/shared/Select';
 import type { ExpenseTransaction, IncomeTransaction } from '../types';
 import { formatCurrency } from '../utils/helpers';
+import { ArrowLeft } from 'lucide-react';
 
 export default function DetectTransactionPage() {
   const { id } = useParams<{ id: string }>();
@@ -105,8 +107,9 @@ export default function DetectTransactionPage() {
   return (
     <div className="max-w-2xl mx-auto space-y-4">
       <div className="flex items-center gap-3">
-        <Button variant="ghost" size="sm" onClick={() => navigate('/messages')}>
-          ← Back
+        <Button variant="ghost" size="sm" onClick={() => navigate('/messages')} className="flex items-center gap-1.5">
+          <ArrowLeft className="w-4 h-4" />
+          <span>Back</span>
         </Button>
         <h2 className="text-xl font-bold text-txt-primary">Transaction Detected</h2>
       </div>
@@ -132,16 +135,17 @@ export default function DetectTransactionPage() {
               className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary font-mono outline-none focus:border-brand/50"
             />
           </div>
-          <div>
-            <label className="block text-xs text-txt-secondary mb-1">Type</label>
-            <select
+          <div className="flex items-center justify-between gap-3">
+            <label className="text-xs text-txt-secondary font-medium shrink-0">Type</label>
+            <Select
               value={txType}
-              onChange={(e) => setTxType(e.target.value as 'credit' | 'debit')}
-              className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary outline-none focus:border-brand/50"
-            >
-              <option value="debit">Debit</option>
-              <option value="credit">Credit</option>
-            </select>
+              onChange={(val) => setTxType(val)}
+              options={[
+                { value: 'debit', label: 'Debit' },
+                { value: 'credit', label: 'Credit' },
+              ]}
+              buttonClassName="py-2 text-sm font-medium"
+            />
           </div>
           <div>
             <label className="block text-xs text-txt-secondary mb-1">Account Number</label>
@@ -204,17 +208,17 @@ export default function DetectTransactionPage() {
           </div>
         </div>
 
-        <div>
-          <label className="block text-xs text-txt-secondary mb-1">Fund</label>
-          <select
+        <div className="flex items-center justify-between gap-3">
+          <label className="text-xs text-txt-secondary font-medium shrink-0">Fund</label>
+          <Select
             value={fundId}
-            onChange={(e) => setFundId(Number(e.target.value))}
-            className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary outline-none focus:border-brand/50"
-          >
-            {state.funds.map((f) => (
-              <option key={f.id} value={f.id}>{f.name} ({formatCurrency(f.balance)})</option>
-            ))}
-          </select>
+            onChange={(val) => setFundId(val)}
+            options={state.funds.map((f) => ({
+              value: f.id,
+              label: `${f.name} (${formatCurrency(f.balance)})`,
+            }))}
+            buttonClassName="py-2 text-sm font-medium"
+          />
         </div>
 
         <div>

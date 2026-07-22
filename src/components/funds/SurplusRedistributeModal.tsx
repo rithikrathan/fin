@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useApp } from '../../context/AppContext';
 import { formatCurrency, round2 } from '../../utils/helpers';
 import Button from '../shared/Button';
 import Modal from '../shared/Modal';
+import Select from '../shared/Select';
 
 interface Props {
   open: boolean;
@@ -85,19 +87,17 @@ export default function SurplusRedistributeModal({ open, onClose, sourceFundId }
   return (
     <Modal open={open} onClose={onClose} title="Redistribute Surplus">
       <div className="space-y-4">
-        <div>
-          <label className="block text-xs text-txt-secondary mb-1">Redistribute from</label>
-          <select
+        <div className="flex items-center justify-between gap-3 p-1">
+          <label className="text-xs text-txt-secondary font-medium shrink-0">Redistribute from</label>
+          <Select
             value={selectedSourceId}
-            onChange={(e) => { setSelectedSourceId(Number(e.target.value)); setAllocations({}); setLocked({}); }}
-            className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary outline-none focus:border-brand/50 transition-colors"
-          >
-            {state.funds.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.name.charAt(0).toUpperCase() + f.name.slice(1)} — {formatCurrency(f.balance)}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => { setSelectedSourceId(val); setAllocations({}); setLocked({}); }}
+            options={state.funds.map((f) => ({
+              value: f.id,
+              label: `${f.name.charAt(0).toUpperCase() + f.name.slice(1)} — ${formatCurrency(f.balance)}`,
+            }))}
+            buttonClassName="py-2 text-sm font-medium"
+          />
         </div>
 
         <div className="bg-white/[0.03] rounded-lg p-3 text-sm text-txt-secondary">
@@ -184,10 +184,12 @@ export default function SurplusRedistributeModal({ open, onClose, sourceFundId }
         </div>
       </div>
 
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-[200] px-5 py-3 rounded-xl bg-surface/95 backdrop-blur-md border border-border-subtle text-base text-txt-primary shadow-2xl">
-          {toast}
-        </div>
+      {toast && createPortal(
+        <div className="fixed left-1/2 -translate-x-1/2 bottom-[calc(84px+env(safe-area-inset-bottom,8px))] lg:bottom-6 z-[99999] px-3.5 py-1.5 rounded-full bg-[#18181B]/95 backdrop-blur-md border border-white/15 text-xs font-semibold text-txt-primary shadow-2xl flex items-center gap-2 pointer-events-none whitespace-nowrap animate-fadeIn">
+          <span className="w-1.5 h-1.5 rounded-full bg-brand shrink-0 animate-pulse" />
+          <span>{toast}</span>
+        </div>,
+        document.body
       )}
     </Modal>
   );

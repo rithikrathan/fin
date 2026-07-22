@@ -130,7 +130,7 @@ jobs:
           echo '<resources><string name="app_name">Fin</string><string name="main_activity_title">Fin</string></resources>' > "$ANDROID_RES/values/strings.xml"
 
       - name: Generate app icons
-        run: npx tauri icon src-tauri/icons/icon.png
+        run: npx tauri icon public/icon-red.svg
 
       - name: Setup Android signing
         run: |

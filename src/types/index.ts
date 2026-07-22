@@ -158,10 +158,11 @@ export interface ReportData {
 }
 
 export interface Settings {
-  currency: string;
-  locale: string;
+  currency?: string;
+  locale?: string;
   expected_monthly_income: number;
   scale_amount: number;
+  unallocated_fund_id?: number;
   impulse_tax_pct: number;
   hourly_rate: number;
   allocation_mode: 'blind' | 'waterfall';
@@ -176,6 +177,7 @@ export interface Settings {
   impulse_tax_target_fund_id?: number;
   expensive_want_threshold?: number;
 }
+export type AppSettings = Settings;
 
 export interface FieldSelector {
   field_name: string;

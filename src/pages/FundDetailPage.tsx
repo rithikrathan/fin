@@ -8,6 +8,7 @@ import Button from '../components/shared/Button';
 import Badge from '../components/shared/Badge';
 import Modal from '../components/shared/Modal';
 import FloatingAddButton from '../components/shared/FloatingAddButton';
+import { ArrowLeft } from 'lucide-react';
 import {
   Area,
   XAxis,
@@ -116,8 +117,12 @@ export default function FundDetailPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">
-          <button onClick={() => navigate('/funds')} className="text-txt-secondary hover:text-txt-primary cursor-pointer text-lg shrink-0">
-            ←
+          <button
+            onClick={() => navigate('/funds')}
+            className="w-10 h-10 rounded-full bg-white/[0.04] border border-white/10 hover:bg-white/10 hover:border-brand/40 text-txt-secondary hover:text-brand flex items-center justify-center transition-all cursor-pointer shrink-0 active:scale-90 shadow-sm"
+            title="Back to Funds"
+          >
+            <ArrowLeft className="w-5 h-5" />
           </button>
           <div className="h-5 w-5 rounded-full shrink-0" style={{ backgroundColor: fund.color }} />
           <h2 className="text-xl font-bold text-txt-primary uppercase tracking-wider truncate">{fund.name}</h2>

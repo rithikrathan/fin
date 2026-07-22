@@ -6,6 +6,7 @@ import Button from '../components/shared/Button';
 import Badge from '../components/shared/Badge';
 import Modal from '../components/shared/Modal';
 import EmptyState from '../components/shared/EmptyState';
+import Select from '../components/shared/Select';
 import FloatingAddButton from '../components/shared/FloatingAddButton';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -305,13 +306,17 @@ function DebtForm({
             <label className="block text-xs text-txt-secondary mb-1">Due Day of Month</label>
             <input type="number" value={dueDay} onChange={(e) => setDueDay(e.target.value)} min="1" max="31" className="w-full bg-transparent border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary font-mono placeholder:text-txt-secondary/30 outline-none transition-colors" />
           </div>
-          <div>
-            <label className="block text-xs text-txt-secondary mb-1">Linked Fund</label>
-            <select value={fundId} onChange={(e) => setFundId(Number(e.target.value))} className="w-full bg-[#121212] border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary outline-none transition-colors">
-              {funds.map((f) => (
-                <option key={f.id} value={f.id}>{f.name} — {formatCurrency(f.balance)}</option>
-              ))}
-            </select>
+          <div className="flex items-center justify-between gap-3">
+            <label className="text-xs text-txt-secondary font-medium shrink-0">Linked Fund</label>
+            <Select
+              value={fundId}
+              onChange={(val) => setFundId(val)}
+              options={funds.map((f) => ({
+                value: f.id,
+                label: `${f.name} — ${formatCurrency(f.balance)}`,
+              }))}
+              buttonClassName="py-2 text-sm font-medium"
+            />
           </div>
         </div>
         <div>

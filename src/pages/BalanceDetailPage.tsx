@@ -215,7 +215,8 @@ export default function BalanceDetailPage() {
         <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={() => navigate('/balances')}
-            className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-txt-secondary hover:text-txt-primary transition-colors cursor-pointer shrink-0"
+            className="w-10 h-10 rounded-full bg-white/[0.04] border border-white/10 hover:bg-white/10 hover:border-brand/40 text-txt-secondary hover:text-brand flex items-center justify-center transition-all cursor-pointer shrink-0 active:scale-90 shadow-sm"
+            title="Back to Balances"
           >
             <ArrowLeft className="w-5 h-5" />
           </button>

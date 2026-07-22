@@ -1,8 +1,10 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useApp } from '../../context/AppContext';
 import { formatCurrency, generateId, round2 } from '../../utils/helpers';
 import Button from '../shared/Button';
 import Modal from '../shared/Modal';
+import Select from '../shared/Select';
 
 interface Props {
   open: boolean;
@@ -56,19 +58,18 @@ export default function FundTransferModal({ open, onClose }: Props) {
     <Modal open={open} onClose={onClose} title="Transfer Between Funds">
       <div className="space-y-4">
         <div className="flex items-center gap-3">
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <label className="block text-xs text-txt-secondary mb-1">From</label>
-            <select
+            <Select
               value={fromFundId}
-              onChange={(e) => setFromFundId(Number(e.target.value))}
-              className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary outline-none focus:border-brand/50 transition-colors"
-            >
-              {state.funds.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name.charAt(0).toUpperCase() + f.name.slice(1)} — {formatCurrency(f.balance)}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setFromFundId(Number(val))}
+              className="w-full"
+              buttonClassName="w-full py-2 bg-white/[0.04] border-border-subtle hover:border-brand/50"
+              options={state.funds.map((f) => ({
+                value: f.id,
+                label: `${f.name.charAt(0).toUpperCase() + f.name.slice(1)} (${formatCurrency(f.balance)})`,
+              }))}
+            />
           </div>
 
           <button
@@ -79,19 +80,18 @@ export default function FundTransferModal({ open, onClose }: Props) {
             ⇄
           </button>
 
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <label className="block text-xs text-txt-secondary mb-1">To</label>
-            <select
+            <Select
               value={toFundId}
-              onChange={(e) => setToFundId(Number(e.target.value))}
-              className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary outline-none focus:border-brand/50 transition-colors"
-            >
-              {state.funds.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name.charAt(0).toUpperCase() + f.name.slice(1)} — {formatCurrency(f.balance)}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setToFundId(Number(val))}
+              className="w-full"
+              buttonClassName="w-full py-2 bg-white/[0.04] border-border-subtle hover:border-brand/50"
+              options={state.funds.map((f) => ({
+                value: f.id,
+                label: `${f.name.charAt(0).toUpperCase() + f.name.slice(1)} (${formatCurrency(f.balance)})`,
+              }))}
+            />
           </div>
         </div>
 
@@ -149,10 +149,12 @@ export default function FundTransferModal({ open, onClose }: Props) {
         </div>
       </div>
 
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-[200] px-5 py-3 rounded-xl bg-surface/95 backdrop-blur-md border border-border-subtle text-base text-txt-primary shadow-2xl">
-          {toast}
-        </div>
+      {toast && createPortal(
+        <div className="fixed left-1/2 -translate-x-1/2 bottom-[calc(84px+env(safe-area-inset-bottom,8px))] lg:bottom-6 z-[99999] px-3.5 py-1.5 rounded-full bg-[#18181B]/95 backdrop-blur-md border border-white/15 text-xs font-semibold text-txt-primary shadow-2xl flex items-center gap-2 pointer-events-none whitespace-nowrap animate-fadeIn">
+          <span className="w-1.5 h-1.5 rounded-full bg-brand shrink-0 animate-pulse" />
+          <span>{toast}</span>
+        </div>,
+        document.body
       )}
     </Modal>
   );

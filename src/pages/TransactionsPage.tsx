@@ -7,6 +7,7 @@ import Card from '../components/shared/Card';
 import Button from '../components/shared/Button';
 import Modal from '../components/shared/Modal';
 import EmptyState from '../components/shared/EmptyState';
+import Select from '../components/shared/Select';
 import { ReceiptText } from 'lucide-react';
 import FilePicker from '../components/shared/FilePicker';
 import { getStorageService } from '../storage/StorageService';
@@ -585,17 +586,18 @@ function AddIncomeModal({
             className="w-full bg-transparent border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary font-mono placeholder:text-txt-secondary/30 outline-none transition-colors"
           />
         </div>
-        <div>
-          <label className="block text-xs text-txt-secondary mb-1">Type</label>
-          <select
+        <div className="flex items-center justify-between gap-3">
+          <label className="text-xs text-txt-secondary font-medium shrink-0">Type</label>
+          <Select
             value={incomeType}
-            onChange={(e) => setIncomeType(e.target.value as IncomeType)}
-            className="w-full bg-[#121212] border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary outline-none transition-colors"
-          >
-            <option value="monthly">Monthly</option>
-            <option value="one_time">One-Time</option>
-            <option value="irregular">Irregular</option>
-          </select>
+            onChange={(val) => setIncomeType(val as IncomeType)}
+            options={[
+              { value: 'monthly', label: 'Monthly' },
+              { value: 'one_time', label: 'One-Time' },
+              { value: 'irregular', label: 'Irregular' },
+            ]}
+            buttonClassName="py-2 text-sm font-medium"
+          />
         </div>
         <div>
           <label className="block text-xs text-txt-secondary mb-1">Category</label>
@@ -759,19 +761,17 @@ function AddExpenseModal({
             className="w-full bg-transparent border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary placeholder:text-txt-secondary/30 outline-none transition-colors"
           />
         </div>
-        <div>
-          <label className="block text-xs text-txt-secondary mb-1">Fund</label>
-          <select
+        <div className="flex items-center justify-between gap-3">
+          <label className="text-xs text-txt-secondary font-medium shrink-0">Fund</label>
+          <Select
             value={fundId}
-            onChange={(e) => setFundId(Number(e.target.value))}
-            className="w-full bg-[#121212] border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary outline-none transition-colors"
-          >
-            {funds.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.name.charAt(0).toUpperCase() + f.name.slice(1)} — {formatCurrency(f.balance)}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => setFundId(val)}
+            options={funds.map((f) => ({
+              value: f.id,
+              label: `${f.name.charAt(0).toUpperCase() + f.name.slice(1)} — ${formatCurrency(f.balance)}`,
+            }))}
+            buttonClassName="py-2 text-sm font-medium"
+          />
         </div>
         <div>
           <label className="block text-xs text-txt-secondary mb-1">Planned?</label>

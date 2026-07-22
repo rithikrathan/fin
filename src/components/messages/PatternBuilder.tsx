@@ -5,6 +5,7 @@ import Card from '../shared/Card';
 import Button from '../shared/Button';
 import Modal from '../shared/Modal';
 import Badge from '../shared/Badge';
+import Select from '../shared/Select';
 
 const FIELD_OPTIONS = [
   { value: 'amount', label: 'Amount', color: 'bg-green-500/30 text-green-300 border-green-500/40' },
@@ -356,17 +357,14 @@ export default function PatternBuilder() {
                 className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary placeholder:text-txt-secondary/50 outline-none focus:border-brand/50"
               />
             </div>
-            <div>
-              <label className="block text-xs text-txt-secondary mb-1">Message Type</label>
-              <select
+            <div className="flex items-center justify-between gap-3">
+              <label className="text-xs text-txt-secondary font-medium shrink-0">Message Type</label>
+              <Select
                 value={draft.message_type}
-                onChange={(e) => setDraft({ ...draft, message_type: e.target.value as MessagePattern['message_type'] })}
-                className="w-full bg-white/[0.04] border border-border-subtle rounded-lg px-3 py-2 text-sm text-txt-primary outline-none focus:border-brand/50"
-              >
-                {MSG_TYPES.map((t) => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
-              </select>
+                onChange={(val) => setDraft({ ...draft, message_type: val as MessagePattern['message_type'] })}
+                options={MSG_TYPES}
+                buttonClassName="py-2 text-sm font-medium"
+              />
             </div>
           </div>
 

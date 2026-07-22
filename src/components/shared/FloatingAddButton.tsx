@@ -76,7 +76,7 @@ export default function FloatingAddButton({ onClick, actions }: FloatingAddButto
     return createPortal(
         <div
             ref={ref}
-            className={`fab-container fixed right-4 bottom-20 z-50 lg:hidden transition-all duration-250 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}
+            className={`fab-container fixed right-4 bottom-[calc(84px+env(safe-area-inset-bottom,8px))] z-50 lg:hidden transition-all duration-250 ${visible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}
         >
             {/* Dark blurred backdrop */}
             {actions && actions.length > 1 && (
@@ -121,7 +121,7 @@ export default function FloatingAddButton({ onClick, actions }: FloatingAddButto
                 <button
                     onClick={scrollToTop}
                     aria-label="Scroll to top"
-                    className={`w-10 h-10 rounded-full bg-[#191919]/90 border border-white/15 text-txt-primary flex items-center justify-center shadow-xl hover:bg-white/10 active:scale-90 transition-all duration-300 ease-out cursor-pointer backdrop-blur-md ${showScrollTop && !open
+                    className={`w-10 h-10 rounded-full bg-[#191919]/90 border border-white/15 text-txt-primary scroll-to-top-btn flex items-center justify-center shadow-xl hover:bg-white/10 active:scale-90 transition-all duration-300 ease-out cursor-pointer backdrop-blur-md ${showScrollTop && !open
                             ? 'opacity-100 translate-y-0 scale-100'
                             : 'opacity-0 translate-y-6 scale-75 pointer-events-none'
                         }`}

@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AppProvider, useApp } from './context/AppContext';
 import Layout from './components/layout/Layout';
+import LoadingScreen from './components/shared/LoadingScreen';
 import HomePage from './pages/HomePage';
 import TransactionsPage from './pages/TransactionsPage';
 import FundsPage from './pages/FundsPage';
@@ -75,10 +76,27 @@ function ScrollToTop() {
   return null;
 }
 
-export default function App() {
+function MainApp() {
+  const [loading, setLoading] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('splash') === 'true') return true;
+    return !sessionStorage.getItem('fin_app_loaded');
+  });
+
+  useEffect(() => {
+    const handleShowSplash = () => setLoading(true);
+    window.addEventListener('show_splash_screen', handleShowSplash);
+    return () => window.removeEventListener('show_splash_screen', handleShowSplash);
+  }, []);
+
+  const handleFinishLoading = () => {
+    sessionStorage.setItem('fin_app_loaded', 'true');
+    setLoading(false);
+  };
+
   return (
-    <AppProvider>
-      <ThemeController />
+    <>
+      {loading && <LoadingScreen onFinished={handleFinishLoading} />}
       <BrowserRouter>
         <ScrollToTop />
         <Routes>
@@ -106,6 +124,15 @@ export default function App() {
           </Route>
         </Routes>
       </BrowserRouter>
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <AppProvider>
+      <ThemeController />
+      <MainApp />
     </AppProvider>
   );
 }

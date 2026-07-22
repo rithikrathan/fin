@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import type { Fund } from '../types';
@@ -8,7 +9,9 @@ import Button from '../components/shared/Button';
 import Badge from '../components/shared/Badge';
 import Modal from '../components/shared/Modal';
 import EmptyState from '../components/shared/EmptyState';
+import Select from '../components/shared/Select';
 import FloatingAddButton from '../components/shared/FloatingAddButton';
+import { ArrowLeft, PieChart } from 'lucide-react';
 
 const PRESET_COLORS = ['#FF2A2A', '#A78BFA', '#4ADE80', '#F59E0B', '#3B82F6', '#EC4899', '#06B6D4', '#F97316'];
 const PROTECTED_NAMES = ['needs', 'wants', 'savings'];
@@ -57,11 +60,20 @@ export default function ManageFundsPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-txt-primary">Manage Funds</h2>
-          <p className="text-sm text-txt-secondary mt-1">
-            {state.funds.length} funds · {totalPct}% allocated
-          </p>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/funds')}
+            className="w-10 h-10 rounded-full bg-white/[0.04] border border-white/10 hover:bg-white/10 hover:border-brand/40 text-txt-secondary hover:text-brand flex items-center justify-center transition-all cursor-pointer shrink-0 active:scale-90 shadow-sm"
+            title="Back to Funds Overview"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <h2 className="text-xl font-bold text-txt-primary">Manage Funds</h2>
+            <p className="text-sm text-txt-secondary mt-0.5">
+              {state.funds.length} funds · {totalPct}% allocated
+            </p>
+          </div>
         </div>
         <Button variant="primary" onClick={openCreate} className="hidden lg:flex">
           + Create Fund
@@ -70,7 +82,7 @@ export default function ManageFundsPage() {
 
       {state.funds.length === 0 ? (
           <EmptyState
-            icon="◈"
+            icon={<PieChart className="w-8 h-8 text-brand" />}
             title="No funds created"
             description="Create funds to split your income into buckets."
           />
@@ -178,10 +190,12 @@ export default function ManageFundsPage() {
         </div>
       </Modal>
 
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-[200] px-5 py-3 rounded-xl bg-surface/95 backdrop-blur-md border border-border-subtle text-base text-txt-primary shadow-2xl">
-          {toast}
-        </div>
+      {toast && createPortal(
+        <div className="fixed left-1/2 -translate-x-1/2 bottom-[calc(84px+env(safe-area-inset-bottom,8px))] lg:bottom-6 z-[99999] px-3.5 py-1.5 rounded-full bg-[#18181B]/95 backdrop-blur-md border border-white/15 text-xs font-semibold text-txt-primary shadow-2xl flex items-center gap-2 pointer-events-none whitespace-nowrap animate-fadeIn">
+          <span className="w-1.5 h-1.5 rounded-full bg-brand shrink-0 animate-pulse" />
+          <span>{toast}</span>
+        </div>,
+        document.body
       )}
       <FloatingAddButton onClick={openCreate} />
     </div>
@@ -447,31 +461,33 @@ function FundFormModal({
                 className="w-full bg-transparent border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary font-mono placeholder:text-txt-secondary/30 outline-none transition-colors"
               />
             </div>
-            <div>
-              <label className="block text-xs text-txt-secondary mb-1">Frequency</label>
-              <select
+            <div className="flex items-center justify-between gap-3">
+              <label className="text-xs text-txt-secondary font-medium shrink-0">Frequency</label>
+              <Select
                 value={interestFrequency}
-                onChange={(e) => setInterestFrequency(e.target.value)}
-                className="w-full bg-[#121212] border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary outline-none transition-colors"
-              >
-                <option value="">None</option>
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-                <option value="yearly">Yearly</option>
-              </select>
+                onChange={(val) => setInterestFrequency(val)}
+                options={[
+                  { value: '', label: 'None' },
+                  { value: 'daily', label: 'Daily' },
+                  { value: 'weekly', label: 'Weekly' },
+                  { value: 'monthly', label: 'Monthly' },
+                  { value: 'yearly', label: 'Yearly' },
+                ]}
+                buttonClassName="py-2 text-sm font-medium"
+              />
             </div>
-            <div>
-              <label className="block text-xs text-txt-secondary mb-1">Type</label>
-              <select
+            <div className="flex items-center justify-between gap-3">
+              <label className="text-xs text-txt-secondary font-medium shrink-0">Type</label>
+              <Select
                 value={interestCalcType}
-                onChange={(e) => setInterestCalcType(e.target.value)}
-                className="w-full bg-[#121212] border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary outline-none transition-colors"
-              >
-                <option value="">None</option>
-                <option value="compound">Compound</option>
-                <option value="simple">Simple</option>
-              </select>
+                onChange={(val) => setInterestCalcType(val)}
+                options={[
+                  { value: '', label: 'None' },
+                  { value: 'compound', label: 'Compound' },
+                  { value: 'simple', label: 'Simple' },
+                ]}
+                buttonClassName="py-2 text-sm font-medium"
+              />
             </div>
           </div>
         </div>
@@ -483,10 +499,12 @@ function FundFormModal({
           </Button>
         </div>
       </div>
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-[200] px-5 py-3 rounded-xl bg-surface/95 backdrop-blur-md border border-border-subtle text-base text-txt-primary shadow-2xl">
-          {toast}
-        </div>
+      {toast && createPortal(
+        <div className="fixed left-1/2 -translate-x-1/2 bottom-[calc(84px+env(safe-area-inset-bottom,8px))] lg:bottom-6 z-[99999] px-3.5 py-1.5 rounded-full bg-[#18181B]/95 backdrop-blur-md border border-white/15 text-xs font-semibold text-txt-primary shadow-2xl flex items-center gap-2 pointer-events-none whitespace-nowrap animate-fadeIn">
+          <span className="w-1.5 h-1.5 rounded-full bg-brand shrink-0 animate-pulse" />
+          <span>{toast}</span>
+        </div>,
+        document.body
       )}
     </Modal>
   );

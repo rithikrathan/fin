@@ -52,22 +52,32 @@ export default function Layout() {
 
     const handleTouchStart = (e: React.TouchEvent) => {
         touchStartY.current = e.touches[0].clientY;
+        touchCurrentY.current = e.touches[0].clientY;
     };
 
     const handleTouchMove = (e: React.TouchEvent) => {
+        const el = e.currentTarget as HTMLElement;
         touchCurrentY.current = e.touches[0].clientY;
+
+        if (el.scrollTop > 0) {
+            touchStartY.current = touchCurrentY.current;
+            el.style.transform = '';
+            return;
+        }
+
         const deltaY = touchCurrentY.current - touchStartY.current;
         if (deltaY > 0) {
-            const el = e.currentTarget as HTMLElement;
             el.style.transform = `translateY(${deltaY}px)`;
+        } else {
+            el.style.transform = '';
         }
     };
 
     const handleTouchEnd = (e: React.TouchEvent) => {
-        const deltaY = touchCurrentY.current - touchStartY.current;
         const el = e.currentTarget as HTMLElement;
+        const deltaY = touchCurrentY.current - touchStartY.current;
         el.style.transform = '';
-        if (deltaY > 100) {
+        if (deltaY > 100 && el.scrollTop <= 0) {
             setMoreOpen(false);
         }
         touchStartY.current = 0;
@@ -121,7 +131,7 @@ export default function Layout() {
             <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
             <div className="flex flex-col flex-1 min-w-0">
                 <Header />
-                <main ref={mainRef} key={location.pathname} className="flex-1 overflow-y-auto p-4 sm:p-6 pb-24 lg:pb-6 page-enter">
+                <main ref={mainRef} key={location.pathname} className="flex-1 overflow-y-auto p-4 sm:p-6 pb-[calc(96px+env(safe-area-inset-bottom,8px))] lg:pb-6 page-enter">
                     <Outlet />
                 </main>
 
@@ -135,7 +145,7 @@ export default function Layout() {
                         <button
                             onClick={scrollToTop}
                             aria-label="Scroll to top"
-                            className={`fixed right-4 bottom-20 lg:bottom-6 z-30 w-11 h-11 rounded-full bg-surface border border-border-subtle text-txt-primary flex items-center justify-center shadow-lg hover:border-brand/40 hover:text-brand active:scale-90 transition-all duration-300 ease-out cursor-pointer backdrop-blur-md ${showScrollTop
+                            className={`fixed right-4 bottom-[calc(84px+env(safe-area-inset-bottom,8px))] lg:bottom-6 z-30 w-11 h-11 rounded-full bg-surface border border-border-subtle text-txt-primary scroll-to-top-btn flex items-center justify-center shadow-lg hover:border-brand/40 hover:text-brand active:scale-90 transition-all duration-300 ease-out cursor-pointer backdrop-blur-md ${showScrollTop
                                 ? 'opacity-100 translate-y-0 scale-100'
                                 : 'opacity-0 translate-y-6 scale-75 pointer-events-none'
                                 }`}
@@ -198,40 +208,45 @@ export default function Layout() {
 
                 {/* Bottom Navigation — hidden when more drawer is open */}
                 {!moreOpen && (
-                    <nav id="bottom-nav" className="lg:hidden sticky bottom-0 left-0 right-0 z-40 bg-surface/90 backdrop-blur-lg border-t border-border-subtle flex items-center justify-around py-2 pb-[calc(10px+env(safe-area-inset-bottom,8px))] px-2 shadow-lg">
+                    <nav id="bottom-nav" className="lg:hidden sticky bottom-0 left-0 right-0 z-40 bg-surface/95 backdrop-blur-xl border-t border-border-subtle flex items-center justify-around py-1.5 pb-[calc(8px+env(safe-area-inset-bottom,8px))] px-2 shadow-[0_-5px_25px_rgba(0,0,0,0.3)]">
                         {bottomLinks.map((link) => {
                             const Icon = link.icon;
                             return (
                                 <NavLink
                                     key={link.to}
-                                    to={link.to === '/expenses' ? '/expenses?tab=wants' : link.to}
+                                    to={link.to === '/expenses' ? '/expenses?tab=needs' : link.to}
                                     end={link.to === '/'}
-                                    className={({ isActive }) =>
-                                        `flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all duration-200 min-w-[64px] min-h-[48px] justify-center active:scale-95 cursor-pointer ${isActive
-                                            ? 'text-brand font-semibold'
-                                            : 'text-txt-secondary hover:text-txt-primary'
-                                        }`
-                                    }
+                                    className="flex flex-col items-center justify-center transition-all duration-200 min-w-[64px] min-h-[52px] py-1 cursor-pointer active:scale-90"
                                 >
-                                    <Icon className="w-5.5 h-5.5" />
-                                    <span className="text-[10px] tracking-tight">{link.label}</span>
+                                    {({ isActive }) => (
+                                        <>
+                                            <div className={`px-4 py-1 rounded-full transition-all duration-300 flex items-center justify-center ${isActive ? 'bg-brand/15 text-brand shadow-[0_0_12px_rgba(255,42,42,0.25)]' : 'bg-transparent text-txt-secondary'}`}>
+                                                <Icon className="w-5 h-5" />
+                                            </div>
+                                            <span className={`text-[10px] tracking-tight ${isActive ? 'font-bold text-brand' : 'font-medium text-txt-secondary'}`}>{link.label}</span>
+                                        </>
+                                    )}
                                 </NavLink>
                             );
                         })}
 
                         {/* More Action Toggle Button */}
-                        <button
-                            onClick={() => setMoreOpen(!moreOpen)}
-                            className={`flex flex-col items-center gap-1 py-1 px-3 rounded-xl transition-all duration-200 min-w-[64px] min-h-[48px] justify-center active:scale-95 cursor-pointer ${['/funds', '/investments', '/reports', '/settings'].some((p) => location.pathname.startsWith(p))
-                                ? 'text-brand font-semibold'
-                                : 'text-txt-secondary hover:text-txt-primary'
-                                }`}
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-5.5 h-5.5">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-                            </svg>
-                            <span className="text-[10px] tracking-tight">More</span>
-                        </button>
+                        {(() => {
+                            const isMoreActive = ['/funds', '/investments', '/reports', '/settings'].some((p) => location.pathname.startsWith(p));
+                            return (
+                                <button
+                                    onClick={() => setMoreOpen(!moreOpen)}
+                                    className="flex flex-col items-center justify-center transition-all duration-200 min-w-[64px] min-h-[52px] py-1 cursor-pointer active:scale-90"
+                                >
+                                    <div className={`px-4 py-1 rounded-full transition-all duration-300 flex items-center justify-center ${isMoreActive ? 'bg-brand/15 text-brand shadow-[0_0_12px_rgba(255,42,42,0.25)]' : 'bg-transparent text-txt-secondary'}`}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-5 h-5">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                                        </svg>
+                                    </div>
+                                    <span className={`text-[10px] tracking-tight ${isMoreActive ? 'font-bold text-brand' : 'font-medium text-txt-secondary'}`}>More</span>
+                                </button>
+                            );
+                        })()}
                     </nav>
                 )}
             </div>

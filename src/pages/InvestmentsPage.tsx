@@ -5,6 +5,7 @@ import { formatCurrency, formatDate, getROI, generateId, assetTypeLabels } from 
 import Button from '../components/shared/Button';
 import Modal from '../components/shared/Modal';
 import EmptyState from '../components/shared/EmptyState';
+import Select from '../components/shared/Select';
 import { TrendingUp } from 'lucide-react';
 import FloatingAddButton from '../components/shared/FloatingAddButton';
 
@@ -208,19 +209,17 @@ function InvestmentForm({
             className="w-full bg-transparent border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary placeholder:text-txt-secondary/30 outline-none transition-colors"
           />
         </div>
-        <div>
-          <label className="block text-xs text-txt-secondary mb-1.5">Asset Type</label>
-          <select
+        <div className="flex items-center justify-between gap-3">
+          <label className="text-xs text-txt-secondary font-medium shrink-0">Asset Type</label>
+          <Select
             value={assetType}
-            onChange={(e) => setAssetType(e.target.value as AssetType)}
-            className="w-full bg-[#121212] border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary outline-none transition-colors"
-          >
-            {Object.entries(assetTypeLabels).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
-              </option>
-            ))}
-          </select>
+            onChange={(val) => setAssetType(val as AssetType)}
+            options={Object.entries(assetTypeLabels).map(([k, v]) => ({
+              value: k as AssetType,
+              label: v,
+            }))}
+            buttonClassName="py-2 text-sm font-medium"
+          />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
