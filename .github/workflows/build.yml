@@ -169,7 +169,7 @@ jobs:
           GRADLE
           sed -i 's/^[[:space:]]*//' src-tauri/gen/android/signing.gradle
 
-          echo 'apply(from = "../signing.gradle")' >> src-tauri/gen/android/app/build.gradle.kts
+          printf '\napply(from = "../signing.gradle")\n' >> src-tauri/gen/android/app/build.gradle.kts
 
       - name: Build APK
         id: android-build
