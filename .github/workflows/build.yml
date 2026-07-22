@@ -145,31 +145,23 @@ jobs:
           EOF
           sed -i 's/^[[:space:]]*//' src-tauri/gen/android/key.properties
 
-          cat > src-tauri/gen/android/signing.gradle.kts <<'GRADLE'
-          android {
-              signingConfigs {
-                  create("release") {
-                      val keyProperties = java.util.Properties()
-                      val keyPropertiesFile = rootProject.file("key.properties")
-                      if (keyPropertiesFile.exists()) {
-                          keyProperties.load(keyPropertiesFile.inputStream())
-                          storeFile = file(keyProperties["storeFile"] as String)
-                          storePassword = keyProperties["storePassword"] as String
-                          keyAlias = keyProperties["keyAlias"] as String
-                          keyPassword = keyProperties["keyPassword"] as String
-                      }
-                  }
-              }
-              buildTypes {
-                  getByName("release") {
-                      signingConfig = signingConfigs.getByName("release")
-                  }
-              }
-          }
-          GRADLE
-          sed -i 's/^[[:space:]]*//' src-tauri/gen/android/signing.gradle.kts
+          sed -i '/android {/a\
+          signingConfigs {\
+              create("release") {\
+                  val keyProperties = java.util.Properties()\
+                  val keyPropertiesFile = rootProject.file("key.properties")\
+                  if (keyPropertiesFile.exists()) {\
+                      keyProperties.load(keyPropertiesFile.inputStream())\
+                      storeFile = file(keyProperties["storeFile"] as String)\
+                      storePassword = keyProperties["storePassword"] as String\
+                      keyAlias = keyProperties["keyAlias"] as String\
+                      keyPassword = keyProperties["keyPassword"] as String\
+                  }\
+              }\
+          }' src-tauri/gen/android/app/build.gradle.kts
 
-          printf '\napply(from = "../signing.gradle.kts")\n' >> src-tauri/gen/android/app/build.gradle.kts
+          sed -i '/getByName("release") {/a\
+              signingConfig = signingConfigs.getByName("release")' src-tauri/gen/android/app/build.gradle.kts
 
       - name: Build APK
         id: android-build
