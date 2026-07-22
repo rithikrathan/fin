@@ -145,7 +145,7 @@ jobs:
           EOF
           sed -i 's/^[[:space:]]*//' src-tauri/gen/android/key.properties
 
-          cat > src-tauri/gen/android/signing.gradle <<'GRADLE'
+          cat > src-tauri/gen/android/signing.gradle.kts <<'GRADLE'
           android {
               signingConfigs {
                   create("release") {
@@ -167,9 +167,9 @@ jobs:
               }
           }
           GRADLE
-          sed -i 's/^[[:space:]]*//' src-tauri/gen/android/signing.gradle
+          sed -i 's/^[[:space:]]*//' src-tauri/gen/android/signing.gradle.kts
 
-          printf '\napply(from = "../signing.gradle")\n' >> src-tauri/gen/android/app/build.gradle.kts
+          printf '\napply(from = "../signing.gradle.kts")\n' >> src-tauri/gen/android/app/build.gradle.kts
 
       - name: Build APK
         id: android-build
