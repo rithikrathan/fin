@@ -130,7 +130,13 @@ jobs:
           echo '<resources><string name="app_name">Fin</string><string name="main_activity_title">Fin</string></resources>' > "$ANDROID_RES/values/strings.xml"
 
       - name: Generate app icons
-        run: npx tauri icon public/icon-red.svg
+        run: |
+          mkdir -p /tmp/fonts
+          curl -sL "https://github.com/google/fonts/raw/main/ofl/playfairdisplay/PlayfairDisplay%5Bwght%5D.ttf" -o /tmp/fonts/PlayfairDisplay.ttf
+          mkdir -p ~/.local/share/fonts
+          cp /tmp/fonts/PlayfairDisplay.ttf ~/.local/share/fonts/
+          fc-cache -f
+          npx tauri icon public/icon.svg
 
       - name: Setup Android signing
         run: |

@@ -233,24 +233,6 @@ export default function SettingsPage() {
                             className="h-5 w-5 accent-brand cursor-pointer"
                         />
                     </div>
-
-                    <div className="flex items-center justify-between p-4 rounded-xl bg-white/[0.03] border border-white/10">
-                        <div>
-                            <h4 className="text-sm font-bold text-txt-primary">Replay Loading Screen</h4>
-                            <p className="text-xs text-txt-secondary mt-0.5">
-                                Preview the initial splash screen with God Particles and Logo Pop-up animation.
-                            </p>
-                        </div>
-                        <button
-                            onClick={() => {
-                                sessionStorage.removeItem('fin_app_loaded');
-                                window.location.href = '/?splash=true';
-                            }}
-                            className="px-3 py-1.5 rounded-lg bg-brand/10 border border-brand/40 text-brand text-xs font-bold hover:bg-brand hover:text-white transition-all cursor-pointer"
-                        >
-                            Play Splash
-                        </button>
-                    </div>
                 </div>
             </div>
 
