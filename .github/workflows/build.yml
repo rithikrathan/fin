@@ -137,31 +137,25 @@ jobs:
           KEYSTORE_PATH="${{ github.workspace }}/src-tauri/gen/android/app/release.jks"
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > "$KEYSTORE_PATH"
 
-          cat > src-tauri/gen/android/key.properties <<EOF
-          storePassword=${{ secrets.KEYSTORE_PASSWORD }}
-          keyPassword=${{ secrets.KEY_PASSWORD }}
-          keyAlias=${{ secrets.KEY_ALIAS }}
-          storeFile=$KEYSTORE_PATH
-          EOF
-          sed -i 's/^[[:space:]]*//' src-tauri/gen/android/key.properties
+          cat > /tmp/signing_block.kts << 'KEOF'
+          signingConfigs {
+              create("release") {
+                  storeFile = file("release.jks")
+                  storePassword = "PLACEHOLDER_STORE"
+                  keyAlias = "PLACEHOLDER_ALIAS"
+                  keyPassword = "PLACEHOLDER_KEY"
+              }
+          }
+          KEOF
+          sed -i 's/^[[:space:]]*//' /tmp/signing_block.kts
+          sed -i "s/PLACEHOLDER_STORE/${{ secrets.KEYSTORE_PASSWORD }}/g" /tmp/signing_block.kts
+          sed -i "s/PLACEHOLDER_ALIAS/${{ secrets.KEY_ALIAS }}/g" /tmp/signing_block.kts
+          sed -i "s/PLACEHOLDER_KEY/${{ secrets.KEY_PASSWORD }}/g" /tmp/signing_block.kts
 
-          sed -i '/android {/a\
-          signingConfigs {\
-              create("release") {\
-                  val keyProperties = java.util.Properties()\
-                  val keyPropertiesFile = rootProject.file("key.properties")\
-                  if (keyPropertiesFile.exists()) {\
-                      keyProperties.load(keyPropertiesFile.inputStream())\
-                      storeFile = file(keyProperties["storeFile"] as String)\
-                      storePassword = keyProperties["storePassword"] as String\
-                      keyAlias = keyProperties["keyAlias"] as String\
-                      keyPassword = keyProperties["keyPassword"] as String\
-                  }\
-              }\
-          }' src-tauri/gen/android/app/build.gradle.kts
+          sed -i '/android {/r /tmp/signing_block.kts' src-tauri/gen/android/app/build.gradle.kts
 
           sed -i '/getByName("release") {/a\
-              signingConfig = signingConfigs.getByName("release")' src-tauri/gen/android/app/build.gradle.kts
+                    signingConfig = signingConfigs.getByName("release")' src-tauri/gen/android/app/build.gradle.kts
 
       - name: Build APK
         id: android-build
