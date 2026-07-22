@@ -208,7 +208,7 @@ export default function Layout() {
 
                 {/* Bottom Navigation — hidden when more drawer is open */}
                 {!moreOpen && (
-                    <nav id="bottom-nav" className="lg:hidden sticky bottom-0 left-0 right-0 z-40 bg-surface/95 backdrop-blur-xl border-t border-border-subtle flex items-center justify-around py-1.5 pb-[calc(8px+env(safe-area-inset-bottom,8px))] px-2">
+                    <nav id="bottom-nav" className="lg:hidden sticky bottom-0 left-0 right-0 z-40 bg-surface/95 backdrop-blur-xl border-t border-border-subtle flex items-center justify-around py-1.5 pb-[calc(8px+env(safe-area-inset-bottom,8px))] px-2 shadow-[0_-5px_25px_rgba(0,0,0,0.3)]">
                         {bottomLinks.map((link) => {
                             const Icon = link.icon;
                             return (
@@ -220,7 +220,7 @@ export default function Layout() {
                                 >
                                     {({ isActive }) => (
                                         <>
-                                            <div className={`px-4 py-1 rounded-full transition-all duration-300 flex items-center justify-center ${isActive ? 'bg-brand/15 text-brand' : 'bg-transparent text-txt-secondary'}`}>
+                                            <div className={`px-4 py-1 rounded-full transition-all duration-300 flex items-center justify-center ${isActive ? 'bg-brand/15 text-brand shadow-[0_0_12px_rgba(255,42,42,0.25)]' : 'bg-transparent text-txt-secondary'}`}>
                                                 <Icon className="w-5 h-5" />
                                             </div>
                                             <span className={`text-[10px] tracking-tight ${isActive ? 'font-bold text-brand' : 'font-medium text-txt-secondary'}`}>{link.label}</span>
@@ -238,7 +238,7 @@ export default function Layout() {
                                     onClick={() => setMoreOpen(!moreOpen)}
                                     className="flex flex-col items-center justify-center transition-all duration-200 min-w-[64px] min-h-[52px] py-1 cursor-pointer active:scale-90"
                                 >
-                                    <div className={`px-4 py-1 rounded-full transition-all duration-300 flex items-center justify-center ${isMoreActive ? 'bg-brand/15 text-brand' : 'bg-transparent text-txt-secondary'}`}>
+                                    <div className={`px-4 py-1 rounded-full transition-all duration-300 flex items-center justify-center ${isMoreActive ? 'bg-brand/15 text-brand shadow-[0_0_12px_rgba(255,42,42,0.25)]' : 'bg-transparent text-txt-secondary'}`}>
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.8} stroke="currentColor" className="w-5 h-5">
                                             <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                                         </svg>
