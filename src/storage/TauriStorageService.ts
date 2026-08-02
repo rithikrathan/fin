@@ -24,6 +24,9 @@ async function ensureSchema(): Promise<void> {
   for (const stmt of statements) {
     await d.execute(stmt + ';');
   }
+  try {
+    await d.select('PRAGMA journal_mode = WAL');
+  } catch {}
 }
 
 function rowToNumber(val: unknown): number {
@@ -368,14 +371,16 @@ export class TauriStorageService implements StorageService {
   }
 
   async saveState(state: StorageState): Promise<void> {
-    // Chain database writes sequentially to prevent SQLite locks and concurrent collision errors
-    this.savePromise = this.savePromise.then(async () => {
+    // Chain database writes sequentially to prevent SQLite locks and concurrent collision errors.
+    // A rejected save must never poison the chain and block future saves, so swallow prior errors.
+    const task = this.savePromise.catch(() => {}).then(async () => {
       await this.init();
       const d = await getDb();
+      // No manual BEGIN/COMMIT here: tauri-plugin-sql executes each statement on a pooled
+      // connection (sqlx rolls back open transactions on release), so manual transactions
+      // silently break and their COMMIT throws. Each statement autocommits instead; the
+      // sequential queue above is what actually prevents database locks.
       try {
-        // Atomic transaction guarantees that intermediate states are not loaded and database disk commits are batched
-        await d.execute('BEGIN TRANSACTION');
-
         await d.execute('DELETE FROM funds');
         for (const f of state.funds) {
           await d.execute(
@@ -515,17 +520,13 @@ export class TauriStorageService implements StorageService {
             [li.id, li.transaction_id, li.item_name, li.count_qty, li.unit_cost, li.line_total]
           );
         }
-
-        await d.execute('COMMIT');
       } catch (e) {
-        try {
-          await d.execute('ROLLBACK');
-        } catch {}
-        console.error('Storage save failed, transaction rolled back:', e);
+        console.error('Storage save failed:', e);
         throw e;
       }
     });
-    return this.savePromise;
+    this.savePromise = task;
+    return task;
   }
 
   async storeFile(id: string, blob: Blob): Promise<void> {

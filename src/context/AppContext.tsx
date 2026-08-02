@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useEffect, type ReactNode } from 'react';
+import { createContext, useContext, useReducer, useEffect, useRef, type ReactNode } from 'react';
 import type { AppState, AppAction, FundSnapshot } from '../types';
 import { initialState } from './initialState';
 import { round2, calculateWantsPredictions } from '../utils/helpers';
@@ -610,6 +610,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }, 300);
     return () => clearTimeout(timer);
   }, [state]);
+
+  const latestStateRef = useRef(state);
+  latestStateRef.current = state;
+
+  useEffect(() => {
+    if (state.loading) return;
+    let flushing = false;
+    const flushSave = () => {
+      if (flushing) return;
+      flushing = true;
+      (async () => {
+        try {
+          const svc = await getStorageService();
+          const { loading: _, ...saveable } = latestStateRef.current;
+          await svc.saveState(saveable);
+        } catch (e) {
+          console.error('Storage flush save failed:', e);
+        }
+      })();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') flushSave();
+    };
+    window.addEventListener('pagehide', flushSave);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('pagehide', flushSave);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [state.loading]);
 
   return <AppContext.Provider value={{ state, dispatch }}>{children}</AppContext.Provider>;
 }
