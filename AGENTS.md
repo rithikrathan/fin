@@ -140,3 +140,10 @@ fin/
 - **Prefer small diffs** — surgical edits over full rewrites unless the whole file needs rework.
 - **Batch similar edits** — if the same logic change applies across multiple files, do them all in one message.
 - **Escalate unknowns** — if unsure about something (which tool to use, which pattern fits, where something lives), ask the user. Don't guess.
+
+## Building & Releases
+
+- **All platform builds run on GitHub CI** — no local Android/desktop toolchain is configured (no NDK, no rust android targets, no `gen/android` checked out). Never attempt local APK/desktop builds.
+- Release flow: commit the change, force-repoint the existing tag to the new commit, push tag → `.github/workflows/build.yml` (Build and Release, `v*` tags) builds linux/windows/android/web and publishes all assets to the GitHub release.
+- To re-release an existing tag after a fix: `git tag -f vX.Y.Z && git push origin vX.Y.Z --force`. A `workflow_dispatch` is not needed for a fresh tag push.
+- If a release publish fails with `Resource not accessible by integration` from `publish-extra-assets`, delete the stale duplicate releases for that tag via `gh api -X DELETE` and re-run the workflow — that error means softprops resolved a release created by a different run and its `GITHUB_TOKEN` cannot update it.
