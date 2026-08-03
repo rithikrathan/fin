@@ -13,6 +13,7 @@ export interface Fund {
   interest_frequency: 'daily' | 'weekly' | 'monthly' | 'yearly' | null;
   interest_calc_type: 'compound' | 'simple' | null;
   is_career_fund: boolean;
+  receive_from_income: boolean;
 }
 
 export interface Milestone {
@@ -90,6 +91,7 @@ export interface Want {
   purchase_link: string | null;
   added_at: string;
   no_lock: boolean;
+  include_impulse_tax: boolean;
 }
 
 export interface Need {
@@ -106,6 +108,9 @@ export interface Need {
   notes: string;
   active: boolean;
   reapproval_required: boolean;
+  paid: boolean;
+  paid_date: string | null;
+  recurring_day: number | null;
   balance_account_id?: string;
 }
 
@@ -255,6 +260,7 @@ export interface BalanceTransaction {
   reference_number?: string;
   notes?: string;
   line_items?: BalanceLineItem[];
+  linked_transaction_id?: number;
 }
 
 export interface BalanceAccount {
@@ -328,6 +334,11 @@ export type AppAction =
   | { type: 'RESET_BALANCE_ACCOUNT'; payload: string }
   | { type: 'ADD_BALANCE_TRANSACTION'; payload: { transaction: BalanceTransaction; line_items?: BalanceLineItem[] } }
   | { type: 'REMOVE_BALANCE_TRANSACTION'; payload: { transaction_id: string; account_id: string } }
+  | { type: 'LOG_BALANCE_PAYMENT'; payload: { balance_tx: BalanceTransaction; expense: ExpenseTransaction } }
+  | { type: 'MARK_NEED_PAID'; payload: number }
+  | { type: 'PROCESS_RECURRING_NEEDS' }
+  | { type: 'PURCHASE_WANT'; payload: number }
+  | { type: 'ADD_WANT_SAVINGS'; payload: { want_id: number; amount: number; from_fund_id: number } }
   | { type: 'LOAD_DATA'; payload: AppState }
   | { type: 'DELETE_ALL' }
   | { type: 'SET_LOADING'; payload: boolean };

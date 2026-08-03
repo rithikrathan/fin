@@ -55,7 +55,7 @@ export default function ManageFundsPage() {
     showToast(`${fund.name} deleted`);
   };
 
-  const totalPct = state.funds.reduce((s, f) => s + f.allocation_pct, 0);
+  const totalPct = state.funds.filter((f) => f.receive_from_income).reduce((s, f) => s + f.allocation_pct, 0);
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -223,6 +223,7 @@ function FundFormModal({
   const [interestRate, setInterestRate] = useState('');
   const [interestFrequency, setInterestFrequency] = useState<string>('');
   const [interestCalcType, setInterestCalcType] = useState<string>('');
+  const [receiveFromIncome, setReceiveFromIncome] = useState(true);
   const [nameError, setNameError] = useState('');
   const [toast, setToast] = useState('');
 
@@ -238,6 +239,7 @@ function FundFormModal({
       setInterestRate(editing?.interest_rate != null ? String(editing.interest_rate) : '');
       setInterestFrequency(editing?.interest_frequency || '');
       setInterestCalcType(editing?.interest_calc_type || '');
+      setReceiveFromIncome(editing?.receive_from_income ?? true);
       setNameError('');
     }
   }, [editing, open, existingFunds.length]);
@@ -245,12 +247,12 @@ function FundFormModal({
   const newPct = parseFloat(pct) || 0;
 
   const otherFunds = isCreating
-    ? existingFunds
-    : existingFunds.filter((f) => f.id !== editing!.id);
+    ? existingFunds.filter((f) => f.receive_from_income)
+    : existingFunds.filter((f) => f.id !== editing!.id && f.receive_from_income);
 
   const otherTotal = otherFunds.reduce((s, f) => s + f.allocation_pct, 0);
 
-  const rebalancedPcts = isCreating && newPct > 0
+  const rebalancedPcts = isCreating && receiveFromIncome && newPct > 0
     ? (() => {
         const remainder = 100 - newPct;
         if (otherTotal === 0 || remainder <= 0) {
@@ -263,8 +265,13 @@ function FundFormModal({
     : {};
 
   const totalPct = isCreating
-    ? newPct + Object.values(rebalancedPcts).reduce((s, v) => s + v, 0)
-    : existingFunds.reduce((s, f) => s + (f.id === editing!.id ? newPct : f.allocation_pct), 0);
+    ? (receiveFromIncome ? newPct : 0) + Object.values(rebalancedPcts).reduce((s, v) => s + v, 0)
+    : existingFunds
+        .filter((f) => f.receive_from_income)
+        .reduce(
+          (s, f) => s + (f.id === editing!.id ? (receiveFromIncome ? newPct : 0) : f.allocation_pct),
+          0
+        );
 
   const handleNameChange = (val: string) => {
     setName(val);
@@ -297,13 +304,14 @@ function FundFormModal({
           ...editing,
           name: trimmed,
           color,
-          allocation_pct: round2(pctVal),
+          allocation_pct: round2(receiveFromIncome ? pctVal : 0),
           allocation_locked: editing.allocation_locked,
           deadline: deadline || null,
           goal_amount: goalAmount ? round2(parseFloat(goalAmount)) : null,
           interest_rate: interestRate ? round2(parseFloat(interestRate)) : null,
           interest_frequency: (interestFrequency || null) as 'daily' | 'weekly' | 'monthly' | 'yearly' | null,
           interest_calc_type: (interestCalcType || null) as 'compound' | 'simple' | null,
+          receive_from_income: receiveFromIncome,
         },
       });
       setToast('Fund updated');
@@ -315,7 +323,7 @@ function FundFormModal({
           id: maxId + 1,
           name: trimmed,
           balance: 0,
-          allocation_pct: round2(pctVal),
+          allocation_pct: round2(receiveFromIncome ? pctVal : 0),
           allocation_locked: false,
           color,
           deadline: deadline || null,
@@ -324,6 +332,7 @@ function FundFormModal({
           interest_frequency: (interestFrequency || null) as 'daily' | 'weekly' | 'monthly' | 'yearly' | null,
           interest_calc_type: (interestCalcType || null) as 'compound' | 'simple' | null,
           is_career_fund: false,
+          receive_from_income: receiveFromIncome,
         },
       });
       for (const f of otherFunds) {
@@ -380,10 +389,25 @@ function FundFormModal({
             className="w-full bg-transparent border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary font-mono placeholder:text-txt-secondary/30 outline-none transition-colors"
           />
           <div className="flex justify-between mt-1 text-xs">
-            <span className="text-txt-secondary">Total across all funds</span>
+            <span className="text-txt-secondary">Total across income funds</span>
             <span className={`font-mono ${Math.round(totalPct) === 100 ? 'text-gain' : 'text-loss'}`}>{Math.round(totalPct)}%</span>
           </div>
         </div>
+
+        <label className="flex items-start gap-3 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={receiveFromIncome}
+            onChange={(e) => setReceiveFromIncome(e.target.checked)}
+            className="mt-0.5 h-4 w-4 accent-brand cursor-pointer"
+          />
+          <span>
+            <span className="block text-sm text-txt-primary font-medium">Receives income allocation</span>
+            <span className="block text-xs text-txt-secondary mt-0.5">
+              Distribute incoming income into this fund. Turn off to fund it manually via transfers only.
+            </span>
+          </span>
+        </label>
 
         {isCreating && newPct > 0 && otherFunds.length > 0 && (
           <div className="bg-white/[0.03] rounded-lg p-3">

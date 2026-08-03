@@ -1,7 +1,8 @@
-import { useState, useRef, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import type { ReportData, ExpenseTransaction, SavedReport } from '../types';
 import { formatCurrency, formatDate, generateId } from '../utils/helpers';
+import { exportReportPDF } from '../utils/export';
 import Card from '../components/shared/Card';
 import Button from '../components/shared/Button';
 
@@ -47,7 +48,6 @@ export default function ReportsPage() {
   // Statements tab states
   const [reportType, setReportType] = useState<ReportType>('monthly');
   const [showHistory, setShowHistory] = useState(false);
-  const reportRef = useRef<HTMLDivElement>(null);
 
   // General expense filter calculations (for Spending Breakdown tab)
   const expenses = useMemo(() => {
@@ -115,43 +115,8 @@ export default function ReportsPage() {
   };
 
   const printReport = useCallback(() => {
-    const el = reportRef.current;
-    if (!el) return;
-    const printWin = window.open('', '_blank');
-    if (!printWin) return;
-    printWin.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Finance Report</title>
-        <style>
-          * { margin: 0; padding: 0; box-sizing: border-box; }
-          body { font-family: 'Inter', sans-serif; background: #050505; color: #F4F4F5; padding: 40px; }
-          h1 { font-size: 28px; margin-bottom: 8px; }
-          h2 { font-size: 18px; color: #A1A1AA; margin: 24px 0 12px; text-transform: uppercase; letter-spacing: 2px; }
-          .subtitle { color: #A1A1AA; font-size: 14px; margin-bottom: 32px; }
-          .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
-          .card { background: rgba(25,25,25,0.6); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 20px; }
-          .card-label { font-size: 11px; color: #A1A1AA; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
-          .card-value { font-family: 'JetBrains Mono', monospace; font-size: 24px; font-weight: bold; }
-          .gain { color: #4ADE80; }
-          .loss { color: #FB923C; }
-          table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
-          th { text-align: left; font-size: 11px; color: #A1A1AA; text-transform: uppercase; letter-spacing: 1px; padding: 8px 12px; border-bottom: 1px solid rgba(255,255,255,0.08); }
-          td { padding: 10px 12px; font-size: 14px; border-bottom: 1px solid rgba(255,255,255,0.04); }
-          .mono { font-family: 'JetBrains Mono', monospace; }
-          @media print { body { background: white; color: #111; } .card { border: 1px solid #ddd; } th, td { border-bottom-color: #ddd; } .card-label { color: #666; } h2 { color: #666; } .subtitle { color: #666; } }
-        </style>
-      </head>
-      <body>
-        ${el.innerHTML}
-      </body>
-      </html>
-    `);
-    printWin.document.close();
-    printWin.focus();
-    setTimeout(() => printWin.print(), 500);
-  }, []);
+    exportReportPDF(report, state.funds);
+  }, [report, state.funds]);
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
@@ -333,7 +298,7 @@ export default function ReportsPage() {
             )}
 
             {/* Printable Report body */}
-            <div ref={reportRef} className="space-y-6">
+            <div className="space-y-6">
               <div className="border-b border-white/[0.06] pb-3 flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-bold text-txt-primary">Account Balance Statement</h3>

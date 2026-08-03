@@ -179,7 +179,7 @@ export default function Layout() {
                         {[
                             { to: '/balances', label: 'Store Balances', icon: CreditCard },
                             { to: '/debts', label: 'Debts & Loans', icon: Landmark },
-                            { to: '/funds', label: 'Funds Split', icon: PieChart },
+                            { to: '/funds', label: 'Funds', icon: PieChart },
                             { to: '/investments', label: 'Investments', icon: TrendingUp },
                             { to: '/reports', label: 'Reports', icon: BarChart3 },
                             { to: '/settings', label: 'Settings', icon: Sliders },

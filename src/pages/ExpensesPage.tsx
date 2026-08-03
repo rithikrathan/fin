@@ -1,9 +1,10 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import type { Want } from '../types';
-import { formatCurrency, formatDate, generateId, priorityLabels } from '../utils/helpers';
+import { formatCurrency, formatDate, generateId, priorityLabels, round2 } from '../utils/helpers';
+import { showToast } from '../utils/toast';
 import Button from '../components/shared/Button';
 import Modal from '../components/shared/Modal';
 import EmptyState from '../components/shared/EmptyState';
@@ -23,6 +24,13 @@ export default function ExpensesPage() {
     const [needFormOpen, setNeedFormOpen] = useState(false);
     const [wantFormOpen, setWantFormOpen] = useState(false);
     const [needsSubTab, setNeedsSubTab] = useState<'recurring' | 'onetime'>('recurring');
+    const [addMoneyWant, setAddMoneyWant] = useState<Want | null>(null);
+    const [editingNeed, setEditingNeed] = useState<import('../types').Need | null>(null);
+
+    const openNeedForm = (need: import('../types').Need | null) => {
+        setEditingNeed(need);
+        setNeedFormOpen(true);
+    };
 
     // --- Needs Page Calculations & Filters ---
     const recurringNeeds = state.needs.filter((n) => n.recurring && n.active);
@@ -56,7 +64,7 @@ export default function ExpensesPage() {
                 <Button
                     variant="primary"
                     size="sm"
-                    onClick={() => (activeTab === 'needs' ? setNeedFormOpen(true) : setWantFormOpen(true))}
+                    onClick={() => (activeTab === 'needs' ? openNeedForm(null) : setWantFormOpen(true))}
                     className="hidden lg:flex items-center gap-1.5"
                 >
                     <Plus className="w-4 h-4" />
@@ -119,7 +127,7 @@ export default function ExpensesPage() {
                                     ? 'Add your recurring bills, rent, subscriptions, etc.'
                                     : 'Add one-time purchases or payments you need to make.'
                             }
-                            action={{ label: 'Add Need', onClick: () => setNeedFormOpen(true) }}
+                            action={{ label: 'Add Need', onClick: () => openNeedForm(null) }}
                         />
                     ) : (
                         <div className="space-y-3">
@@ -143,6 +151,11 @@ export default function ExpensesPage() {
                                             {need.recurring && need.frequency && (
                                                 <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
                                                     {need.frequency}
+                                                </span>
+                                            )}
+                                            {need.paid && (
+                                                <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-green-500/10 text-green-400 border border-green-500/20">
+                                                    Paid{need.paid_date ? ` ${need.paid_date}` : ''}
                                                 </span>
                                             )}
                                         </div>
@@ -174,6 +187,32 @@ export default function ExpensesPage() {
                                                     className="text-brand border-brand/30 hover:bg-brand/10 font-semibold"
                                                 >
                                                     View Store
+                                                </Button>
+                                            )}
+                                            {!need.balance_account_id && !need.paid && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outlined"
+                                                    className="text-gain border-green-500/30 hover:bg-green-500/10 font-semibold"
+                                                    onClick={() => {
+                                                        const fund = state.funds.find((f) => f.id === need.fund_id);
+                                                        if (fund && fund.balance < need.amount) {
+                                                            showToast(`Insufficient ${fund.name} balance`);
+                                                            return;
+                                                        }
+                                                        dispatch({ type: 'MARK_NEED_PAID', payload: need.id });
+                                                    }}
+                                                >
+                                                    Mark Paid
+                                                </Button>
+                                            )}
+                                            {!need.balance_account_id && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outlined"
+                                                    onClick={() => openNeedForm(need)}
+                                                >
+                                                    Edit
                                                 </Button>
                                             )}
                                             {need.recurring && (
@@ -244,7 +283,7 @@ export default function ExpensesPage() {
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                             {pendingWants.map((w) => (
-                                <WantCard key={w.id} want={w} dispatch={dispatch} />
+                                <WantCard key={w.id} want={w} funds={state.funds} impulseTaxPct={state.settings.impulse_tax_pct} dispatch={dispatch} onAddMoney={setAddMoneyWant} />
                             ))}
                         </div>
                     )}
@@ -256,7 +295,7 @@ export default function ExpensesPage() {
                             </h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                                 {purchasedWants.map((w) => (
-                                    <WantCard key={w.id} want={w} dispatch={dispatch} />
+                                    <WantCard key={w.id} want={w} funds={state.funds} impulseTaxPct={state.settings.impulse_tax_pct} dispatch={dispatch} onAddMoney={setAddMoneyWant} />
                                 ))}
                             </div>
                         </div>
@@ -266,15 +305,29 @@ export default function ExpensesPage() {
 
             {/* Floating Mobile Contextual FAB */}
             <FloatingAddButton
-                onClick={() => (activeTab === 'needs' ? setNeedFormOpen(true) : setWantFormOpen(true))}
+                onClick={() => (activeTab === 'needs' ? openNeedForm(null) : setWantFormOpen(true))}
             />
 
             {/* Left-Side Viewport Category Selector Dropdown (Rendered in top-level body portal at same level as FAB) */}
             <CategoryDropdownPortal activeTab={activeTab} navigate={navigate} />
 
             {/* Form Modals */}
-            <NeedForm open={needFormOpen} onClose={() => setNeedFormOpen(false)} funds={state.funds} dispatch={dispatch} />
+            <NeedForm
+                open={needFormOpen}
+                onClose={() => { setEditingNeed(null); setNeedFormOpen(false); }}
+                editing={editingNeed}
+                funds={state.funds}
+                dispatch={dispatch}
+            />
             <WantForm open={wantFormOpen} onClose={() => setWantFormOpen(false)} dispatch={dispatch} />
+            {addMoneyWant && (
+                <AddWantMoneyModal
+                    want={addMoneyWant}
+                    funds={state.funds}
+                    onClose={() => setAddMoneyWant(null)}
+                    dispatch={dispatch}
+                />
+            )}
         </div>
     );
 }
@@ -301,12 +354,35 @@ function CategoryDropdownPortal({ activeTab, navigate }: { activeTab: 'needs' | 
 // Subcomponents: WantCard (Restored v1.1.2 Card Style)
 function WantCard({
     want,
+    funds,
+    impulseTaxPct,
     dispatch,
+    onAddMoney,
 }: {
     want: Want;
+    funds: import('../types').Fund[];
+    impulseTaxPct: number;
     dispatch: React.Dispatch<import('../types').AppAction>;
+    onAddMoney: (want: Want) => void;
 }) {
     const pct = want.target_price > 0 ? (want.current_saved / want.target_price) * 100 : 0;
+
+    const handlePurchase = () => {
+        const wantsFund = funds.find((f) => f.name.toLowerCase() === 'wants') || funds[0];
+        if (!wantsFund) {
+            showToast('No fund available to pay from');
+            return;
+        }
+        const total = want.include_impulse_tax
+            ? round2(want.target_price + (want.target_price * (impulseTaxPct || 0)) / 100)
+            : want.target_price;
+        if (wantsFund.balance < total) {
+            showToast(`Insufficient ${wantsFund.name} balance`);
+            return;
+        }
+        dispatch({ type: 'PURCHASE_WANT', payload: want.id });
+        showToast(`${want.name} purchased`);
+    };
 
     return (
         <div className={`rounded-xl border border-white/[0.08] bg-white/[0.02] overflow-hidden flex flex-col justify-between transition-all hover:border-white/20 ${want.purchased ? 'opacity-60' : ''}`}>
@@ -357,6 +433,13 @@ function WantCard({
                         </div>
                     </div>
 
+                    {want.include_impulse_tax && !want.purchased && (
+                        <div className="text-[10px] text-amber-400/80 flex items-center gap-1">
+                            <Sparkles className="w-3 h-3 shrink-0" />
+                            <span>Includes {impulseTaxPct}% impulse tax on purchase</span>
+                        </div>
+                    )}
+
                     {want.predicted_date && !want.purchased && (
                         <div className="text-xs text-txt-secondary flex items-center gap-1.5 pt-1 border-t border-white/[0.04]">
                             <Sparkles className="w-3.5 h-3.5 text-brand shrink-0" />
@@ -372,19 +455,19 @@ function WantCard({
                                 <Button
                                     size="sm"
                                     variant="primary"
-                                    onClick={() =>
-                                        dispatch({
-                                            type: 'UPDATE_WANT',
-                                            payload: {
-                                                ...want,
-                                                purchased: true,
-                                                purchase_date: new Date().toISOString().split('T')[0]
-                                            }
-                                        })
-                                    }
+                                    onClick={handlePurchase}
                                     className="flex-1 justify-center"
                                 >
                                     Purchase
+                                </Button>
+                                <Button
+                                    size="sm"
+                                    variant="outlined"
+                                    onClick={() => onAddMoney(want)}
+                                    className="shrink-0"
+                                    title="Add money toward this want"
+                                >
+                                    + Money
                                 </Button>
                                 {want.purchase_link && (
                                     <a
@@ -434,11 +517,13 @@ function WantCard({
 function NeedForm({
     open,
     onClose,
+    editing,
     funds,
     dispatch,
 }: {
     open: boolean;
     onClose: () => void;
+    editing: import('../types').Need | null;
     funds: import('../types').Fund[];
     dispatch: React.Dispatch<import('../types').AppAction>;
 }) {
@@ -450,44 +535,79 @@ function NeedForm({
     const [dueDate, setDueDate] = useState('');
     const [fundId, setFundId] = useState(funds[0]?.id || 1);
     const [autopay, setAutopay] = useState(false);
+    const [recurringDay, setRecurringDay] = useState('');
     const [notes, setNotes] = useState('');
 
     const selectedFund = funds.find((f) => f.id === fundId);
+
+    useEffect(() => {
+        if (open) {
+            setName(editing?.name || '');
+            setAmount(editing ? String(editing.amount) : '');
+            setCategory(editing?.category || '');
+            setRecurring(editing ? editing.recurring : true);
+            setFrequency((editing?.frequency as any) || 'monthly');
+            setDueDate(editing?.due_date || '');
+            setFundId(editing?.fund_id || funds[0]?.id || 1);
+            setAutopay(editing?.autopay || false);
+            setRecurringDay(editing?.recurring_day ? String(editing.recurring_day) : '');
+            setNotes(editing?.notes || '');
+        }
+    }, [open, editing, funds]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         const amt = parseFloat(amount);
         if (!name || isNaN(amt) || amt <= 0) return;
 
-        dispatch({
-            type: 'ADD_NEED',
-            payload: {
-                id: generateId(),
-                name,
-                amount: amt,
-                category: category || 'general',
-                recurring,
-                frequency: recurring ? frequency : null,
-                due_date: dueDate || null,
-                fund_id: fundId,
-                fund_name: selectedFund?.name || 'needs',
-                autopay,
-                notes,
-                active: true,
-                reapproval_required: false,
-            },
-        });
-        setName('');
-        setAmount('');
-        setCategory('');
-        setNotes('');
-        setDueDate('');
-        setAutopay(false);
+        if (editing) {
+            dispatch({
+                type: 'UPDATE_NEED',
+                payload: {
+                    ...editing,
+                    name,
+                    amount: amt,
+                    category: category || 'general',
+                    recurring,
+                    frequency: recurring ? frequency : null,
+                    due_date: dueDate || null,
+                    fund_id: fundId,
+                    fund_name: selectedFund?.name || editing.fund_name,
+                    autopay,
+                    notes,
+                    active: editing.active,
+                    reapproval_required: editing.reapproval_required,
+                    recurring_day: recurring && recurringDay ? parseInt(recurringDay) : null,
+                },
+            });
+        } else {
+            dispatch({
+                type: 'ADD_NEED',
+                payload: {
+                    id: generateId(),
+                    name,
+                    amount: amt,
+                    category: category || 'general',
+                    recurring,
+                    frequency: recurring ? frequency : null,
+                    due_date: dueDate || null,
+                    fund_id: fundId,
+                    fund_name: selectedFund?.name || 'needs',
+                    autopay,
+                    notes,
+                    active: true,
+                    reapproval_required: false,
+                    paid: false,
+                    paid_date: null,
+                    recurring_day: recurring && recurringDay ? parseInt(recurringDay) : null,
+                },
+            });
+        }
         onClose();
     };
 
     return (
-        <Modal open={open} onClose={onClose} title="Add Need">
+        <Modal open={open} onClose={onClose} title={editing ? 'Edit Need' : 'Add Need'}>
             <form onSubmit={handleSubmit} className="space-y-5">
                 <div>
                     <label className="block text-xs text-txt-secondary mb-1">Name</label>
@@ -565,6 +685,24 @@ function NeedForm({
                     </div>
                 )}
 
+                {recurring && frequency === 'monthly' && (
+                    <div>
+                        <label className="block text-xs text-txt-secondary mb-1">Billing Day of Month</label>
+                        <input
+                            type="number"
+                            value={recurringDay}
+                            onChange={(e) => setRecurringDay(e.target.value)}
+                            placeholder="e.g. 3 (every month at the 3rd)"
+                            min="1"
+                            max="31"
+                            className="w-full bg-transparent border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary outline-none transition-colors"
+                        />
+                        <p className="text-xs text-txt-secondary mt-1">
+                            The due date advances to this day each cycle (months without it use the last day).
+                        </p>
+                    </div>
+                )}
+
                 <div>
                     <label className="block text-xs text-txt-secondary mb-1.5">
                         {recurring ? 'Next Due Date' : 'Due Date'}
@@ -618,7 +756,7 @@ function NeedForm({
                         Cancel
                     </Button>
                     <Button type="submit" variant="primary">
-                        Add Need
+                        {editing ? 'Save Changes' : 'Add Need'}
                     </Button>
                 </div>
             </form>
@@ -643,7 +781,9 @@ function WantForm({
     const [notes, setNotes] = useState('');
     const [purchaseLink, setPurchaseLink] = useState('');
     const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+    const [includeImpulseTax, setIncludeImpulseTax] = useState(false);
     const fileRef = useRef<HTMLInputElement>(null);
+    const { state } = useApp();
 
     const handlePhoto = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -676,6 +816,7 @@ function WantForm({
                 purchase_link: purchaseLink || null,
                 added_at: new Date().toISOString(),
                 no_lock: false,
+                include_impulse_tax: includeImpulseTax,
             },
         });
         setName('');
@@ -685,6 +826,7 @@ function WantForm({
         setNotes('');
         setPurchaseLink('');
         setPhotoUrl(null);
+        setIncludeImpulseTax(false);
         onClose();
     };
 
@@ -790,12 +932,129 @@ function WantForm({
                     />
                 </div>
 
+                <label className="flex items-start gap-3 cursor-pointer select-none">
+                    <input
+                        type="checkbox"
+                        checked={includeImpulseTax}
+                        onChange={(e) => setIncludeImpulseTax(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 accent-brand cursor-pointer"
+                    />
+                    <span>
+                        <span className="block text-sm text-txt-primary font-medium">
+                            Add impulse tax on purchase
+                        </span>
+                        <span className="block text-xs text-txt-secondary mt-0.5">
+                            {state.settings.impulse_tax_pct}% of target is charged as extra when buying
+                        </span>
+                    </span>
+                </label>
+
                 <div className="flex justify-end gap-3 pt-2">
                     <Button type="button" variant="ghost" onClick={onClose}>
                         Cancel
                     </Button>
                     <Button type="submit" variant="primary">
                         Add Want
+                    </Button>
+                </div>
+            </form>
+        </Modal>
+    );
+}
+
+// Subcomponents: AddWantMoneyModal
+function AddWantMoneyModal({
+    want,
+    funds,
+    onClose,
+    dispatch,
+}: {
+    want: Want;
+    funds: import('../types').Fund[];
+    onClose: () => void;
+    dispatch: React.Dispatch<import('../types').AppAction>;
+}) {
+    const wantsFund = funds.find((f) => f.name.toLowerCase() === 'wants');
+    const sourceFunds = funds.filter((f) => f.id !== wantsFund?.id);
+    const [fundId, setFundId] = useState(sourceFunds[0]?.id || funds[0]?.id || 1);
+    const [amount, setAmount] = useState('');
+
+    const selectedFund = funds.find((f) => f.id === fundId);
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const amt = round2(parseFloat(amount) || 0);
+        if (amt <= 0) {
+            showToast('Enter a valid amount');
+            return;
+        }
+        if (!wantsFund) {
+            showToast('No wants fund available');
+            return;
+        }
+        if (selectedFund && selectedFund.balance < amt) {
+            showToast(`Insufficient balance in ${selectedFund.name}`);
+            return;
+        }
+        dispatch({
+            type: 'ADD_WANT_SAVINGS',
+            payload: { want_id: want.id, amount: amt, from_fund_id: fundId },
+        });
+        showToast(`Added ${formatCurrency(amt)} toward ${want.name}`);
+        onClose();
+    };
+
+    return (
+        <Modal open onClose={onClose} title={`Add Money — ${want.name}`}>
+            <form onSubmit={handleSubmit} className="space-y-5">
+                <div className="p-3 rounded-xl bg-white/[0.04] border border-white/10 flex items-center justify-between text-xs">
+                    <span className="text-txt-secondary">Saved / Target</span>
+                    <span className="font-mono font-bold text-txt-primary">
+                        {formatCurrency(want.current_saved)} / {formatCurrency(want.target_price)}
+                    </span>
+                </div>
+
+                <div>
+                    <label className="block text-xs text-txt-secondary mb-1">Transfer From</label>
+                    <select
+                        value={fundId}
+                        onChange={(e) => setFundId(parseInt(e.target.value))}
+                        className="w-full bg-transparent border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary outline-none transition-colors cursor-pointer"
+                    >
+                        {sourceFunds.map((f) => (
+                            <option key={f.id} value={f.id} className="bg-[#18181B]">
+                                {f.name} ({formatCurrency(f.balance)})
+                            </option>
+                        ))}
+                    </select>
+                </div>
+
+                <div>
+                    <label className="block text-xs text-txt-secondary mb-1">Amount (₹)</label>
+                    <input
+                        type="number"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        placeholder="0"
+                        min="0"
+                        required
+                        autoFocus
+                        className="w-full bg-transparent border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary font-mono placeholder:text-txt-secondary/30 outline-none transition-colors"
+                    />
+                </div>
+
+                {wantsFund && (
+                    <p className="text-xs text-txt-secondary">
+                        Will be added to <span className="text-txt-primary font-semibold">{wantsFund.name}</span> fund balance and marked as saved.
+                    </p>
+                )}
+
+                <div className="flex justify-end gap-3 pt-2">
+                    <Button type="button" variant="ghost" onClick={onClose}>
+                        Cancel
+                    </Button>
+                    <Button type="submit" variant="primary">
+                        Add Money
                     </Button>
                 </div>
             </form>

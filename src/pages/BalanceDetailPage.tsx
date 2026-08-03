@@ -8,6 +8,7 @@ import AddBillModal from '../components/balances/AddBillModal';
 import LogPaymentModal from '../components/balances/LogPaymentModal';
 import { formatCurrency } from '../utils/helpers';
 import { showToast } from '../utils/toast';
+import { exportBalanceStatementPDF } from '../utils/export';
 import {
   ArrowLeft,
   Plus,
@@ -121,87 +122,11 @@ export default function BalanceDetailPage() {
   };
 
   const handleExportPDF = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      showToast('Please allow popups to generate PDF receipt');
-      return;
-    }
-
-    const isLight = document.documentElement.classList.contains('light');
-
-    const html = `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>${account.title} - Statement</title>
-          <style>
-            body { font-family: system-ui, sans-serif; padding: 30px; color: ${isLight ? '#0F172A' : '#F4F4F5'}; background: ${isLight ? '#FFFFFF' : '#09090B'}; }
-            h1 { margin-bottom: 4px; font-size: 24px; }
-            .meta { color: #71717A; font-size: 12px; margin-bottom: 20px; }
-            .due-card { background: ${isLight ? '#F1F5F9' : '#18181B'}; padding: 16px; border-radius: 12px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; }
-            .due-val { font-size: 24px; font-weight: bold; font-family: monospace; color: #DC2626; }
-            table { width: 100%; border-collapse: collapse; margin-top: 16px; }
-            th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid ${isLight ? '#E2E8F0' : '#27272A'}; font-size: 13px; }
-            th { text-transform: uppercase; font-size: 10px; color: #71717A; letter-spacing: 1px; }
-            .amount { text-align: right; font-family: monospace; font-weight: bold; }
-            .addition { color: #DC2626; }
-            .subtraction { color: #059669; }
-          </style>
-        </head>
-        <body>
-          <h1>${account.title}</h1>
-          <div class="meta">Generated on ${new Date().toLocaleDateString()} • Account Ledger Statement</div>
-          
-          <div class="due-card">
-            <div>
-              <div style="text-transform: uppercase; font-size: 10px; color: #71717A;">Total Outstanding Due</div>
-              <div class="due-val">${formatCurrency(account.total_due)}</div>
-            </div>
-            <div>
-              <span style="font-weight: bold; text-transform: uppercase; font-size: 11px;">Status: ${account.status}</span>
-            </div>
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Type</th>
-                <th>Reference</th>
-                <th>Details / Items</th>
-                <th style="text-align: right;">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${transactions
-                .map((tx) => {
-                  const txItems = lineItems.filter((li) => li.transaction_id === tx.id);
-                  const detail =
-                    txItems.length > 0
-                      ? txItems.map((i) => `${i.item_name} (${i.count_qty} × ${formatCurrency(i.unit_cost)})`).join(', ')
-                      : tx.notes || 'Payment Logged';
-                  return `
-                    <tr>
-                      <td>${tx.date}</td>
-                      <td style="font-weight: bold;">${tx.type}</td>
-                      <td>${tx.reference_number || '-'}</td>
-                      <td>${detail}</td>
-                      <td class="amount ${tx.type === 'Addition' ? 'addition' : 'subtraction'}">
-                        ${tx.type === 'Addition' ? '+' : '-'}${formatCurrency(tx.transaction_total)}
-                      </td>
-                    </tr>
-                  `;
-                })
-                .join('')}
-            </tbody>
-          </table>
-          <script>window.print();</script>
-        </body>
-      </html>
-    `;
-
-    printWindow.document.write(html);
-    printWindow.document.close();
+    exportBalanceStatementPDF({
+      account,
+      transactions,
+      lineItems,
+    });
     setMenuOpen(false);
   };
 
@@ -423,6 +348,7 @@ export default function BalanceDetailPage() {
         isOpen={isLogPaymentOpen}
         onClose={() => setIsLogPaymentOpen(false)}
         accountId={account.id}
+        accountTitle={account.title}
         currentDue={account.total_due}
       />
     </div>

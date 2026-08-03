@@ -25,6 +25,7 @@ export default function Select<T extends string | number = string>({
     placeholder = 'Select option',
 }: SelectProps<T>) {
     const [open, setOpen] = useState(false);
+    const [alignRight, setAlignRight] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
     const selectedOption = options.find((opt) => opt.value === value);
@@ -53,7 +54,15 @@ export default function Select<T extends string | number = string>({
         <div ref={containerRef} className={`relative ${isFullWidth ? 'flex w-full' : 'inline-flex'} ${className}`}>
             <button
                 type="button"
-                onClick={() => setOpen((o) => !o)}
+                onClick={() => {
+                    const rect = containerRef.current?.getBoundingClientRect();
+                    if (rect && rect.right + 320 > window.innerWidth) {
+                        setAlignRight(true);
+                    } else {
+                        setAlignRight(false);
+                    }
+                    setOpen((o) => !o);
+                }}
                 className={`bg-surface border border-border-subtle rounded-xl px-3.5 py-2 text-xs text-txt-primary font-bold outline-none flex items-center justify-between gap-2.5 transition-all cursor-pointer hover:border-brand/50 active:scale-95 ${isFullWidth ? 'w-full' : ''} ${buttonClassName}`}
             >
                 <span className="truncate">{selectedOption ? selectedOption.label : placeholder}</span>
@@ -61,7 +70,7 @@ export default function Select<T extends string | number = string>({
             </button>
 
             {open && (
-                <div className="absolute left-0 top-full mt-1.5 min-w-full w-max max-w-[320px] z-50 select-dropdown-popover border border-border-subtle rounded-xl p-1.5 shadow-2xl animate-fadeIn space-y-0.5">
+                <div className={`absolute top-full mt-1.5 min-w-full w-max max-w-[320px] z-50 select-dropdown-popover border border-border-subtle rounded-xl p-1.5 shadow-2xl animate-fadeIn space-y-0.5 ${alignRight ? 'right-0' : 'left-0'}`}>
                     {options.map((opt) => {
                         const isSelected = opt.value === value;
                         return (

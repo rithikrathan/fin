@@ -44,11 +44,19 @@ function normalizeState(parsed: Record<string, unknown>): AppState {
     ...(tx.type === 'expense' && !('notes' in tx) ? { notes: '' } : {}),
   }));
 
+  if (state.funds) {
+    state.funds = state.funds.map((f) => ({
+      ...f,
+      receive_from_income: f.receive_from_income ?? true,
+    }));
+  }
+
   if (state.wants) {
     state.wants = state.wants.map((w) => ({
       ...w,
       added_at: w.added_at ?? new Date().toISOString(),
       no_lock: w.no_lock ?? false,
+      include_impulse_tax: w.include_impulse_tax ?? false,
     }));
   }
 
@@ -56,6 +64,9 @@ function normalizeState(parsed: Record<string, unknown>): AppState {
     state.needs = state.needs.map((n) => ({
       ...n,
       reapproval_required: n.reapproval_required ?? false,
+      paid: n.paid ?? false,
+      paid_date: n.paid_date ?? null,
+      recurring_day: n.recurring_day ?? null,
     }));
   }
 

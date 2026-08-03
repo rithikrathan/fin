@@ -24,6 +24,37 @@ export function generateId(): number {
   return Date.now() + Math.floor(Math.random() * 1000);
 }
 
+export function toDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+export function getNextDueDate(
+  fromDate: string,
+  frequency: 'monthly' | 'weekly' | 'yearly' | null,
+  dayOfMonth: number | null
+): string {
+  const from = new Date(fromDate + 'T00:00:00');
+  if (isNaN(from.getTime())) return fromDate;
+
+  if (frequency === 'weekly') {
+    const d = new Date(from);
+    d.setDate(d.getDate() + 7);
+    return toDateStr(d);
+  }
+
+  if (frequency === 'yearly') {
+    const d = new Date(from);
+    d.setFullYear(d.getFullYear() + 1);
+    return toDateStr(d);
+  }
+
+  const d = new Date(from.getFullYear(), from.getMonth() + 1, 1);
+  const day = dayOfMonth && dayOfMonth >= 1 && dayOfMonth <= 31 ? dayOfMonth : from.getDate();
+  const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  d.setDate(Math.min(day, lastDay));
+  return toDateStr(d);
+}
+
 export function getROI(invested: number, current: number): number {
   if (invested === 0) return 0;
   return ((current - invested) / invested) * 100;

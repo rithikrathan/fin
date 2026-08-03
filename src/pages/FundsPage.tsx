@@ -354,18 +354,19 @@ function ConfigModal({
   funds: import('../types').Fund[];
   dispatch: React.Dispatch<import('../types').AppAction>;
 }) {
+  const eligibleFunds = funds.filter((f) => f.receive_from_income);
   const [pctValues, setPctValues] = useState<Record<number, string>>(
-    Object.fromEntries(funds.map((f) => [f.id, String(f.allocation_pct)]))
+    Object.fromEntries(eligibleFunds.map((f) => [f.id, String(f.allocation_pct)]))
   );
   const [locked, setLocked] = useState<Record<number, boolean>>(
-    Object.fromEntries(funds.map((f) => [f.id, f.allocation_locked]))
+    Object.fromEntries(eligibleFunds.map((f) => [f.id, f.allocation_locked]))
   );
   const [toast, setToast] = useState('');
 
   const totalPct = Object.values(pctValues).reduce((s, v) => s + (parseFloat(v) || 0), 0);
   const valid = Math.round(totalPct) === 100;
 
-  const allocPieData = funds.map((f) => ({
+  const allocPieData = eligibleFunds.map((f) => ({
     name: f.name.charAt(0).toUpperCase() + f.name.slice(1),
     value: parseFloat(pctValues[f.id]) || 0,
     color: f.color,
@@ -374,8 +375,8 @@ function ConfigModal({
   const handleSliderChange = useCallback((fundId: number, newValue: string) => {
     const newVal = Math.min(100, Math.max(0, parseFloat(newValue) || 0));
 
-    const otherFunds = funds.filter((f) => f.id !== fundId && !locked[f.id]);
-    const lockedTotal = funds
+    const otherFunds = eligibleFunds.filter((f) => f.id !== fundId && !locked[f.id]);
+    const lockedTotal = eligibleFunds
       .filter((f) => f.id !== fundId && locked[f.id])
       .reduce((s, f) => s + (parseFloat(pctValues[f.id]) || 0), 0);
 
@@ -394,7 +395,7 @@ function ConfigModal({
       }
       return next;
     });
-  }, [funds, locked, pctValues]);
+  }, [eligibleFunds, locked, pctValues]);
 
   const toggleLock = (fundId: number) => {
     setLocked((prev) => ({ ...prev, [fundId]: !prev[fundId] }));
@@ -403,7 +404,7 @@ function ConfigModal({
   const save = () => {
     if (!valid) return;
     for (const fund of funds) {
-      const val = parseFloat(pctValues[fund.id]);
+      const val = eligibleFunds.includes(fund) ? parseFloat(pctValues[fund.id]) : 0;
       if (isNaN(val)) continue;
       dispatch({
         type: 'UPDATE_FUND',
@@ -459,7 +460,7 @@ function ConfigModal({
       )}
 
       <div className="space-y-4">
-        {funds.map((f) => {
+        {eligibleFunds.map((f) => {
           const isLocked = !!locked[f.id];
           return (
             <div key={f.id}>
@@ -504,6 +505,15 @@ function ConfigModal({
             </div>
           );
         })}
+        {funds.filter((f) => !f.receive_from_income).map((f) => (
+          <div key={f.id} className="flex items-center justify-between py-1">
+            <div className="flex items-center gap-2">
+              <div className="h-3 w-3 rounded-full" style={{ backgroundColor: f.color }} />
+              <span className="text-base text-txt-secondary">{f.name}</span>
+            </div>
+            <span className="text-[10px] text-txt-secondary bg-white/[0.06] px-1.5 py-0.5 rounded">manual only</span>
+          </div>
+        ))}
         <div className="flex justify-between text-base mt-2">
           <span className="text-txt-secondary">Total</span>
           <span className={`font-mono font-semibold ${valid ? 'text-gain' : 'text-loss'}`}>

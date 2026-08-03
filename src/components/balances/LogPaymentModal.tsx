@@ -4,24 +4,30 @@ import Button from '../shared/Button';
 import { useApp } from '../../context/AppContext';
 import { formatCurrency, round2 } from '../../utils/helpers';
 import { showToast } from '../../utils/toast';
-import type { BalanceTransaction } from '../../types';
+import type { BalanceTransaction, ExpenseTransaction } from '../../types';
 
 export default function LogPaymentModal({
   isOpen,
   onClose,
   accountId,
+  accountTitle,
   currentDue,
 }: {
   isOpen: boolean;
   onClose: () => void;
   accountId: string;
+  accountTitle: string;
   currentDue: number;
 }) {
-  const { dispatch } = useApp();
+  const { state, dispatch } = useApp();
+  const needsFund = state.funds.find((f) => f.name.toLowerCase() === 'needs') || state.funds[0];
+  const [fundId, setFundId] = useState(needsFund?.id || 1);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [amountInput, setAmountInput] = useState('');
   const [referenceNumber, setReferenceNumber] = useState('');
   const [notes, setNotes] = useState('');
+
+  const selectedFund = state.funds.find((f) => f.id === fundId) || state.funds[0];
 
   const handleLogPayment = (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,8 +37,21 @@ export default function LogPaymentModal({
       showToast('Please enter a valid payment amount');
       return;
     }
+    if (!selectedFund) {
+      showToast('Create a fund to pay from');
+      return;
+    }
+    if (amount > currentDue) {
+      showToast(`Amount exceeds total due of ${formatCurrency(currentDue)}`);
+      return;
+    }
+    if (selectedFund.balance < amount) {
+      showToast(`Insufficient balance in ${selectedFund.name}`);
+      return;
+    }
 
     const txId = 'bal_tx_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4);
+    const expenseId = Date.now() + Math.floor(Math.random() * 1000);
 
     const newTx: BalanceTransaction = {
       id: txId,
@@ -44,12 +63,28 @@ export default function LogPaymentModal({
       notes: notes.trim() || undefined,
     };
 
+    const expense: ExpenseTransaction = {
+      id: expenseId,
+      type: 'expense',
+      description: `Store balance payment — ${accountTitle}`,
+      amount,
+      category: 'Store Balance',
+      fund_id: selectedFund.id,
+      fund_name: selectedFund.name,
+      planned: true,
+      date,
+      is_misc: false,
+      notes: notes.trim() || 'Paid via store balance tab',
+      file_id: null,
+      file_name: null,
+    };
+
     dispatch({
-      type: 'ADD_BALANCE_TRANSACTION',
-      payload: { transaction: newTx },
+      type: 'LOG_BALANCE_PAYMENT',
+      payload: { balance_tx: newTx, expense },
     });
 
-    showToast(`Payment of ${formatCurrency(amount)} recorded`);
+    showToast(`Payment of ${formatCurrency(amount)} recorded from ${selectedFund.name}`);
     setAmountInput('');
     setReferenceNumber('');
     setNotes('');
@@ -66,6 +101,23 @@ export default function LogPaymentModal({
 
         <div>
           <label className="block text-[10px] uppercase tracking-widest font-bold text-txt-secondary mb-1">
+            Pay From Fund
+          </label>
+          <select
+            value={fundId}
+            onChange={(e) => setFundId(parseInt(e.target.value))}
+            className="w-full bg-transparent border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary outline-none transition-colors cursor-pointer"
+          >
+            {state.funds.map((f) => (
+              <option key={f.id} value={f.id} className="bg-[#18181B]">
+                {f.name} ({formatCurrency(f.balance)})
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-[10px] uppercase tracking-widest font-bold text-txt-secondary mb-1">
             Payment Amount (₹)
           </label>
           <input
@@ -78,6 +130,11 @@ export default function LogPaymentModal({
             required
             className="w-full bg-transparent border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary font-mono outline-none transition-colors"
           />
+          {selectedFund && (
+            <p className="text-xs text-txt-secondary mt-1">
+              Available in {selectedFund.name}: <span className="font-mono">{formatCurrency(selectedFund.balance)}</span>
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

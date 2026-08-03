@@ -14,6 +14,7 @@ import { getStorageService } from '../storage/StorageService';
 import { MessagesIcon, DownloadIcon } from '../components/shared/Icons';
 import FloatingAddButton from '../components/shared/FloatingAddButton';
 import { runPatterns } from '../utils/matching';
+import { exportTransactionsCSV, exportTransactionsPDF } from '../utils/export';
 
 export default function TransactionsPage() {
   const { state, dispatch } = useApp();
@@ -25,7 +26,7 @@ export default function TransactionsPage() {
   // Transactions list filter and modal states
   const [incomeOpen, setIncomeOpen] = useState(false);
   const [expenseOpen, setExpenseOpen] = useState(false);
-  const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
+  const [filter, setFilter] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
 
   // Messages log states
   const [msgFilter, setMsgFilter] = useState<'all' | 'matched' | 'unmatched' | 'created' | 'dismissed'>('all');
@@ -98,7 +99,7 @@ export default function TransactionsPage() {
         {viewMode === 'transactions' ? (
           <>
             <div className="flex items-center gap-1.5 min-w-0">
-              {(['all', 'income', 'expense'] as const).map((f) => (
+              {(['all', 'income', 'expense', 'transfer'] as const).map((f) => (
                 <button
                   key={f}
                   onClick={() => setFilter(f)}
@@ -108,7 +109,7 @@ export default function TransactionsPage() {
                       : 'text-txt-secondary hover:text-txt-primary hover:bg-white/[0.04]'
                   }`}
                 >
-                  {f.charAt(0).toUpperCase() + f.slice(1)}
+                  {f === 'transfer' ? 'Fund Transfer' : f.charAt(0).toUpperCase() + f.slice(1)}
                 </button>
               ))}
             </div>
@@ -128,13 +129,13 @@ export default function TransactionsPage() {
                     <div className="fixed inset-0 z-40" onClick={() => setDownloadOpen(false)} />
                     <div className="absolute right-0 top-full mt-1 z-50 bg-[#111] border border-white/[0.08] rounded-xl shadow-2xl overflow-hidden min-w-[120px]">
                       <button
-                        onClick={() => { exportCSV(sorted, state); setDownloadOpen(false); }}
+                        onClick={() => { exportTransactionsCSV(sorted, state); setDownloadOpen(false); }}
                         className="w-full text-left px-4 py-2.5 text-sm text-txt-secondary hover:text-txt-primary hover:bg-white/[0.04] transition-colors cursor-pointer"
                       >
                         CSV
                       </button>
                       <button
-                        onClick={() => { exportPDF(sorted, state); setDownloadOpen(false); }}
+                        onClick={() => { exportTransactionsPDF(sorted, state); setDownloadOpen(false); }}
                         className="w-full text-left px-4 py-2.5 text-sm text-txt-secondary hover:text-txt-primary hover:bg-white/[0.04] transition-colors cursor-pointer"
                       >
                         PDF
@@ -546,9 +547,7 @@ function AddIncomeModal({
       category: category || 'general',
       date: new Date().toISOString().split('T')[0],
       notes,
-      fund_allocation: Object.fromEntries(
-        funds.map((f) => [f.id, round2(amt * (f.allocation_pct / 100))])
-      ) as Record<number, number>,
+      fund_allocation: computeAllocation(amt, funds),
       file_id: fileId,
       file_name: fileName,
     };
@@ -632,14 +631,14 @@ function AddIncomeModal({
             <div className="font-semibold text-txt-primary text-sm mb-2">
               Auto-allocation
             </div>
-            {funds.map((f) => (
+            {funds.filter((f) => f.receive_from_income).map((f) => (
               <div key={f.id} className="flex justify-between">
                 <span className="flex items-center gap-2">
                   <span className="h-2 w-2 rounded-full" style={{ backgroundColor: f.color }} />
                   {f.name}
                 </span>
                 <span className="font-mono text-gain">
-                  {formatCurrency(round2(parseFloat(amount) * (f.allocation_pct / 100)))}
+                  {formatCurrency(computeAllocation(parseFloat(amount), funds)[f.id] || 0)}
                 </span>
               </div>
             ))}
@@ -657,6 +656,15 @@ function AddIncomeModal({
       </form>
     </Modal>
   );
+}
+
+function computeAllocation(amount: number, funds: import('../types').Fund[]): Record<number, number> {
+  const eligible = funds.filter((f) => f.receive_from_income);
+  const totalPct = eligible.reduce((s, f) => s + f.allocation_pct, 0);
+  const scale = totalPct > 0 ? totalPct : 1;
+  return Object.fromEntries(
+    eligible.map((f) => [f.id, round2(amount * (f.allocation_pct / scale))])
+  ) as Record<number, number>;
 }
 
 function AddExpenseModal({
@@ -841,80 +849,4 @@ function AddExpenseModal({
       </form>
     </Modal>
   );
-}
-
-function exportCSV(transactions: import('../types').Transaction[], state: import('../types').AppState) {
-  const header = 'Date,Type,Name/Description,Amount,Fund,Category,Notes';
-  const rows = transactions.map((t) => {
-    if (t.type === 'income') {
-      const alloc = Object.entries(t.fund_allocation)
-        .map(([id, amt]) => {
-          const f = state.funds.find((f) => f.id === Number(id));
-          return `${f?.name || id}: ${amt}`;
-        }).join('; ');
-      return `"${t.date}","Income","${t.name}",${t.amount},"${alloc}","${t.category}","${t.notes}"`;
-    }
-    if (t.type === 'expense') {
-      return `"${t.date}","Expense","${t.description}",${t.amount},"${t.fund_name}","${t.category}","${t.is_misc ? 'misc' : ''}"`;
-    }
-    const from = state.funds.find((f) => f.id === t.from_fund_id);
-    const to = state.funds.find((f) => f.id === t.to_fund_id);
-    return `"${t.date}","Transfer","${t.note}",${t.amount},"${from?.name} → ${to?.name}","",""`;
-  });
-  const csv = [header, ...rows].join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `transactions-${new Date().toISOString().split('T')[0]}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-function exportPDF(transactions: import('../types').Transaction[], state: import('../types').AppState) {
-  const rows = transactions.map((t) => {
-    let name = '', amount = 0, fund = '', category = '', type = '';
-    if (t.type === 'income') {
-      type = 'Income'; name = t.name; amount = t.amount;
-      fund = Object.entries(t.fund_allocation).map(([id, amt]) => {
-        const f = state.funds.find((f) => f.id === Number(id));
-        return `${f?.name || id}: ₹${amt}`;
-      }).join(', ');
-      category = t.category;
-    } else if (t.type === 'expense') {
-      type = 'Expense'; name = t.description; amount = -t.amount;
-      fund = t.fund_name; category = t.category;
-    } else {
-      const from = state.funds.find((f) => f.id === t.from_fund_id);
-      const to = state.funds.find((f) => f.id === t.to_fund_id);
-      type = 'Transfer'; name = t.note; amount = t.amount;
-      fund = `${from?.name} → ${to?.name}`;
-    }
-    return `<tr>
-      <td>${t.date}</td><td>${type}</td><td>${name}</td>
-      <td style="font-family:monospace;${amount >= 0 ? 'color:#4ADE80' : 'color:#FB923C'}">${amount >= 0 ? '+' : ''}₹${Math.abs(amount).toLocaleString('en-IN')}</td>
-      <td>${fund}</td><td>${category}</td>
-    </tr>`;
-  }).join('');
-
-  const printWin = window.open('', '_blank');
-  if (!printWin) return;
-  printWin.document.write(`<!DOCTYPE html><html><head><title>Transactions</title>
-    <style>
-      *{margin:0;padding:0;box-sizing:border-box}
-      body{font-family:Inter,sans-serif;background:#050505;color:#F4F4F5;padding:40px}
-      h1{font-size:24px;margin-bottom:8px}
-      .sub{color:#A1A1AA;font-size:13px;margin-bottom:24px}
-      table{width:100%;border-collapse:collapse}
-      th{text-align:left;font-size:11px;color:#A1A1AA;text-transform:uppercase;letter-spacing:1px;padding:8px 10px;border-bottom:1px solid rgba(255,255,255,0.08)}
-      td{padding:8px 10px;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.04)}
-      @media print{body{background:#fff;color:#111}th,td{border-bottom-color:#ddd}th{color:#666}}
-    </style></head><body>
-    <h1>Transactions</h1>
-    <div class="sub">${transactions.length} transactions · Generated ${new Date().toLocaleDateString('en-IN')}</div>
-    <table><thead><tr><th>Date</th><th>Type</th><th>Name</th><th>Amount</th><th>Fund</th><th>Category</th></tr></thead>
-    <tbody>${rows}</tbody></table></body></html>`);
-  printWin.document.close();
-  printWin.focus();
-  setTimeout(() => printWin.print(), 500);
 }

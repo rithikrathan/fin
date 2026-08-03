@@ -3,9 +3,9 @@ import type { AppState } from '../types';
 export function getSeedState(): AppState {
   return {
     funds: [
-      { id: 1, name: 'needs', balance: 0, allocation_pct: 50, allocation_locked: false, color: '#FF2A2A', deadline: null, goal_amount: null, interest_rate: null, interest_frequency: null, interest_calc_type: null, is_career_fund: false },
-      { id: 2, name: 'wants', balance: 0, allocation_pct: 20, allocation_locked: false, color: '#A78BFA', deadline: null, goal_amount: null, interest_rate: null, interest_frequency: null, interest_calc_type: null, is_career_fund: false },
-      { id: 3, name: 'savings', balance: 0, allocation_pct: 30, allocation_locked: false, color: '#4ADE80', deadline: null, goal_amount: null, interest_rate: null, interest_frequency: null, interest_calc_type: null, is_career_fund: false },
+      { id: 1, name: 'needs', balance: 0, allocation_pct: 50, allocation_locked: false, color: '#FF2A2A', deadline: null, goal_amount: null, interest_rate: null, interest_frequency: null, interest_calc_type: null, is_career_fund: false, receive_from_income: true },
+      { id: 2, name: 'wants', balance: 0, allocation_pct: 20, allocation_locked: false, color: '#A78BFA', deadline: null, goal_amount: null, interest_rate: null, interest_frequency: null, interest_calc_type: null, is_career_fund: false, receive_from_income: true },
+      { id: 3, name: 'savings', balance: 0, allocation_pct: 30, allocation_locked: false, color: '#4ADE80', deadline: null, goal_amount: null, interest_rate: null, interest_frequency: null, interest_calc_type: null, is_career_fund: false, receive_from_income: true },
     ],
     milestones: [],
     fund_snapshots: [],

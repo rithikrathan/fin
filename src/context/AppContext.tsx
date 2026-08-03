@@ -1,7 +1,7 @@
 import { createContext, useContext, useReducer, useEffect, useRef, type ReactNode } from 'react';
 import type { AppState, AppAction, FundSnapshot } from '../types';
 import { initialState } from './initialState';
-import { round2, calculateWantsPredictions } from '../utils/helpers';
+import { round2, calculateWantsPredictions, getNextDueDate, formatCurrency } from '../utils/helpers';
 import { getStorageService } from '../storage/StorageService';
 
 function snapshotFund(fundId: number, balance: number, snapshots: FundSnapshot[]): FundSnapshot[] {
@@ -14,6 +14,38 @@ function snapshotFund(fundId: number, balance: number, snapshots: FundSnapshot[]
     ...snapshots,
     { id: Date.now() + Math.floor(Math.random() * 1000), fund_id: fundId, balance, date: today },
   ];
+}
+
+function revertLinkedExpenses(
+  state: AppState,
+  balanceTxIds: Set<string>
+): { transactions: AppState['transactions']; funds: AppState['funds']; snapshots: FundSnapshot[] } {
+  const expenseIds = new Set(
+    (state.balance_transactions || [])
+      .filter((bt) => balanceTxIds.has(bt.id) && bt.linked_transaction_id != null)
+      .map((bt) => bt.linked_transaction_id!)
+  );
+  if (expenseIds.size === 0) {
+    return { transactions: state.transactions, funds: state.funds, snapshots: [...state.fund_snapshots] };
+  }
+
+  let funds = state.funds;
+  const transactions = state.transactions.filter((tx) => {
+    if (tx.type === 'expense' && expenseIds.has(tx.id)) {
+      funds = funds.map((f) => (f.id === tx.fund_id ? { ...f, balance: round2(f.balance + tx.amount) } : f));
+      return false;
+    }
+    return true;
+  });
+
+  let snapshots = [...state.fund_snapshots];
+  for (const f of funds) {
+    const old = state.funds.find((of) => of.id === f.id);
+    if (old && old.balance !== f.balance) {
+      snapshots = snapshotFund(f.id, f.balance, snapshots);
+    }
+  }
+  return { transactions, funds, snapshots };
 }
 
 function appReducer(state: AppState, action: AppAction): AppState {
@@ -184,6 +216,103 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'REMOVE_WANT':
       return { ...state, wants: state.wants.filter((w) => w.id !== action.payload) };
 
+    case 'PURCHASE_WANT': {
+      const want = state.wants.find((w) => w.id === action.payload);
+      if (!want || want.purchased) return state;
+      const wantsFund = state.funds.find((f) => f.name.toLowerCase() === 'wants') || state.funds[0];
+      if (!wantsFund) return state;
+
+      const tax = want.include_impulse_tax
+        ? round2((want.target_price * (state.settings.impulse_tax_pct || 0)) / 100)
+        : 0;
+      const total = round2(want.target_price + tax);
+      if (wantsFund.balance < total) return state;
+
+      const expenseTx: import('../types').ExpenseTransaction = {
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        type: 'expense',
+        description: `Want purchase — ${want.name}`,
+        amount: total,
+        category: 'Wants',
+        fund_id: wantsFund.id,
+        fund_name: wantsFund.name,
+        planned: true,
+        date: new Date().toISOString().split('T')[0],
+        is_misc: false,
+        notes: tax > 0 ? `Includes ${state.settings.impulse_tax_pct}% impulse tax (+${formatCurrency(tax)})` : '',
+        file_id: null,
+        file_name: null,
+      };
+
+      const newFunds = state.funds.map((f) =>
+        f.id === wantsFund.id ? { ...f, balance: round2(f.balance - total) } : f
+      );
+      let newSnapshots = [...state.fund_snapshots];
+      for (const f of newFunds) {
+        const old = state.funds.find((of) => of.id === f.id);
+        if (old && old.balance !== f.balance) {
+          newSnapshots = snapshotFund(f.id, f.balance, newSnapshots);
+        }
+      }
+
+      return {
+        ...state,
+        funds: newFunds,
+        fund_snapshots: newSnapshots,
+        transactions: [expenseTx, ...state.transactions],
+        wants: state.wants.map((w) =>
+          w.id === want.id
+            ? { ...w, purchased: true, purchase_date: new Date().toISOString().split('T')[0], current_saved: 0 }
+            : w
+        ),
+      };
+    }
+
+    case 'ADD_WANT_SAVINGS': {
+      const { want_id, amount, from_fund_id } = action.payload;
+      const want = state.wants.find((w) => w.id === want_id);
+      const wantsFund = state.funds.find((f) => f.name.toLowerCase() === 'wants');
+      const source = state.funds.find((f) => f.id === from_fund_id);
+      if (!want || want.purchased || !wantsFund || !source || amount <= 0 || source.balance < amount) {
+        return state;
+      }
+
+      const transferTx: import('../types').TransferTransaction = {
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        type: 'transfer',
+        from_fund_id,
+        to_fund_id: wantsFund.id,
+        amount: round2(amount),
+        note: `Saved toward want: ${want.name}`,
+        date: new Date().toISOString().split('T')[0],
+        file_id: null,
+        file_name: null,
+      };
+
+      const newFunds = state.funds.map((f) => {
+        if (f.id === from_fund_id) return { ...f, balance: round2(f.balance - amount) };
+        if (f.id === wantsFund.id) return { ...f, balance: round2(f.balance + amount) };
+        return f;
+      });
+      let newSnapshots = [...state.fund_snapshots];
+      for (const f of newFunds) {
+        const old = state.funds.find((of) => of.id === f.id);
+        if (old && old.balance !== f.balance) {
+          newSnapshots = snapshotFund(f.id, f.balance, newSnapshots);
+        }
+      }
+
+      return {
+        ...state,
+        funds: newFunds,
+        fund_snapshots: newSnapshots,
+        transactions: [transferTx, ...state.transactions],
+        wants: state.wants.map((w) =>
+          w.id === want_id ? { ...w, current_saved: round2(w.current_saved + amount) } : w
+        ),
+      };
+    }
+
     case 'ADD_NEED':
       return { ...state, needs: [...state.needs, action.payload] };
     case 'UPDATE_NEED':
@@ -193,6 +322,135 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
     case 'REMOVE_NEED':
       return { ...state, needs: state.needs.filter((n) => n.id !== action.payload) };
+
+    case 'MARK_NEED_PAID': {
+      const need = state.needs.find((n) => n.id === action.payload);
+      if (!need || need.balance_account_id || need.paid) return state;
+      const fund = state.funds.find((f) => f.id === need.fund_id);
+      if (!fund || fund.balance < need.amount) return state;
+
+      const today = new Date().toISOString().split('T')[0];
+      const expenseTx: import('../types').ExpenseTransaction = {
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        type: 'expense',
+        description: need.name,
+        amount: need.amount,
+        category: need.category || 'Needs',
+        fund_id: need.fund_id,
+        fund_name: need.fund_name,
+        planned: true,
+        date: today,
+        is_misc: false,
+        notes: 'Paid via needs tracking',
+        file_id: null,
+        file_name: null,
+      };
+
+      const newFunds = state.funds.map((f) =>
+        f.id === need.fund_id ? { ...f, balance: round2(f.balance - need.amount) } : f
+      );
+      let newSnapshots = [...state.fund_snapshots];
+      for (const f of newFunds) {
+        const old = state.funds.find((of) => of.id === f.id);
+        if (old && old.balance !== f.balance) {
+          newSnapshots = snapshotFund(f.id, f.balance, newSnapshots);
+        }
+      }
+
+      const updatedNeeds = state.needs.map((n) => {
+        if (n.id !== need.id) return n;
+        const updated: import('../types').Need = { ...n, paid: true, paid_date: today };
+        if (n.recurring) {
+          updated.due_date = getNextDueDate(today, n.frequency || 'monthly', n.recurring_day);
+        }
+        return updated;
+      });
+
+      return {
+        ...state,
+        funds: newFunds,
+        fund_snapshots: newSnapshots,
+        transactions: [expenseTx, ...state.transactions],
+        needs: updatedNeeds,
+      };
+    }
+
+    case 'PROCESS_RECURRING_NEEDS': {
+      const today = new Date().toISOString().split('T')[0];
+      let newFunds = state.funds;
+      let newSnapshots = [...state.fund_snapshots];
+      let newTransactions = [...state.transactions];
+      let newNeeds = state.needs;
+      let fundChanged = false;
+
+      const needsToProcess = state.needs.filter(
+        (n) => n.recurring && n.active && n.due_date && n.due_date <= today
+      );
+
+      for (const need of needsToProcess) {
+        const freq = need.frequency || 'monthly';
+
+        if (need.paid) {
+          let next = getNextDueDate(need.due_date!, freq, need.recurring_day);
+          let guard = 0;
+          while (next <= today && guard < 400) {
+            next = getNextDueDate(next, freq, need.recurring_day);
+            guard++;
+          }
+          newNeeds = newNeeds.map((n) =>
+            n.id === need.id ? { ...n, paid: false, paid_date: null, due_date: next } : n
+          );
+          continue;
+        }
+
+        if (!need.autopay) continue;
+
+        const fund = newFunds.find((f) => f.id === need.fund_id);
+        if (!fund || fund.balance < need.amount) continue;
+
+        const expenseTx: import('../types').ExpenseTransaction = {
+          id: Date.now() + Math.floor(Math.random() * 1000),
+          type: 'expense',
+          description: need.name,
+          amount: need.amount,
+          category: need.category || 'Needs',
+          fund_id: need.fund_id,
+          fund_name: need.fund_name,
+          planned: true,
+          date: today,
+          is_misc: false,
+          notes: 'Autopay — recurring need',
+          file_id: null,
+          file_name: null,
+        };
+        newTransactions = [expenseTx, ...newTransactions];
+        newFunds = newFunds.map((f) =>
+          f.id === need.fund_id ? { ...f, balance: round2(f.balance - need.amount) } : f
+        );
+        fundChanged = true;
+
+        let next = getNextDueDate(today, freq, need.recurring_day);
+        let guard = 0;
+        while (next <= today && guard < 400) {
+          next = getNextDueDate(next, freq, need.recurring_day);
+          guard++;
+        }
+        newNeeds = newNeeds.map((n) =>
+          n.id === need.id ? { ...n, paid: true, paid_date: today, due_date: next } : n
+        );
+      }
+
+      if (fundChanged) {
+        for (const f of newFunds) {
+          const old = state.funds.find((of) => of.id === f.id);
+          if (old && old.balance !== f.balance) {
+            newSnapshots = snapshotFund(f.id, f.balance, newSnapshots);
+          }
+        }
+      }
+
+      return { ...state, funds: newFunds, fund_snapshots: newSnapshots, transactions: newTransactions, needs: newNeeds };
+    }
 
     case 'ADD_INVESTMENT':
       return { ...state, investments: [...state.investments, action.payload] };
@@ -336,6 +594,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
         notes: `Store balance tab for ${action.payload.title}`,
         active: true,
         reapproval_required: false,
+        paid: false,
+        paid_date: null,
+        recurring_day: null,
         balance_account_id: action.payload.id,
       };
 
@@ -360,9 +621,18 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
     }
 
-    case 'REMOVE_BALANCE_ACCOUNT':
+    case 'REMOVE_BALANCE_ACCOUNT': {
+      const accountTxIds = new Set(
+        (state.balance_transactions || [])
+          .filter((tx) => tx.account_id === action.payload)
+          .map((tx) => tx.id)
+      );
+      const reverted = revertLinkedExpenses(state, accountTxIds);
       return {
         ...state,
+        funds: reverted.funds,
+        fund_snapshots: reverted.snapshots,
+        transactions: reverted.transactions,
         balance_accounts: (state.balance_accounts || []).filter((b) => b.id !== action.payload),
         balance_transactions: (state.balance_transactions || []).filter((tx) => tx.account_id !== action.payload),
         balance_line_items: (state.balance_line_items || []).filter((li) => {
@@ -371,9 +641,16 @@ function appReducer(state: AppState, action: AppAction): AppState {
         }),
         needs: (state.needs || []).filter((n) => n.balance_account_id !== action.payload),
       };
+    }
 
     case 'RESET_BALANCE_ACCOUNT': {
       const accountId = action.payload;
+      const accountTxIds = new Set(
+        (state.balance_transactions || [])
+          .filter((tx) => tx.account_id === accountId)
+          .map((tx) => tx.id)
+      );
+      const reverted = revertLinkedExpenses(state, accountTxIds);
       const updatedAccounts = (state.balance_accounts || []).map((acc) => {
         if (acc.id === accountId) {
           return { ...acc, total_due: 0, status: 'Paid' as const };
@@ -388,6 +665,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
       });
       return {
         ...state,
+        funds: reverted.funds,
+        fund_snapshots: reverted.snapshots,
+        transactions: reverted.transactions,
         balance_accounts: updatedAccounts,
         balance_transactions: (state.balance_transactions || []).filter((tx) => tx.account_id !== accountId),
         balance_line_items: (state.balance_line_items || []).filter((li) => {
@@ -440,8 +720,63 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
     }
 
+    case 'LOG_BALANCE_PAYMENT': {
+      const { balance_tx, expense } = action.payload;
+      const linkedTx = { ...balance_tx, linked_transaction_id: expense.id };
+      const allTx = [linkedTx, ...(state.balance_transactions || [])];
+
+      const accountTx = allTx.filter((t) => t.account_id === linkedTx.account_id);
+      const additionTotal = accountTx
+        .filter((t) => t.type === 'Addition')
+        .reduce((sum, t) => sum + t.transaction_total, 0);
+      const subtractionTotal = accountTx
+        .filter((t) => t.type === 'Subtraction')
+        .reduce((sum, t) => sum + t.transaction_total, 0);
+
+      const netDue = Math.max(0, round2(additionTotal - subtractionTotal));
+      let status: 'Pending' | 'Partially Paid' | 'Paid' = 'Pending';
+      if (netDue === 0 && additionTotal > 0) status = 'Paid';
+      else if (netDue > 0 && subtractionTotal > 0) status = 'Partially Paid';
+
+      const updatedAccounts = (state.balance_accounts || []).map((acc) => {
+        if (acc.id === linkedTx.account_id) {
+          return { ...acc, total_due: netDue, status };
+        }
+        return acc;
+      });
+
+      const updatedNeeds = (state.needs || []).map((n) => {
+        if (n.balance_account_id === linkedTx.account_id) {
+          return { ...n, amount: netDue };
+        }
+        return n;
+      });
+
+      const newFunds = state.funds.map((f) =>
+        f.id === expense.fund_id ? { ...f, balance: round2(f.balance - expense.amount) } : f
+      );
+      let newSnapshots = [...state.fund_snapshots];
+      for (const f of newFunds) {
+        const old = state.funds.find((of) => of.id === f.id);
+        if (old && old.balance !== f.balance) {
+          newSnapshots = snapshotFund(f.id, f.balance, newSnapshots);
+        }
+      }
+
+      return {
+        ...state,
+        funds: newFunds,
+        fund_snapshots: newSnapshots,
+        transactions: [expense, ...state.transactions],
+        balance_accounts: updatedAccounts,
+        balance_transactions: allTx,
+        needs: updatedNeeds,
+      };
+    }
+
     case 'REMOVE_BALANCE_TRANSACTION': {
       const { transaction_id, account_id } = action.payload;
+      const reverted = revertLinkedExpenses(state, new Set([transaction_id]));
       const remainingTx = (state.balance_transactions || []).filter((t) => t.id !== transaction_id);
       const remainingItems = (state.balance_line_items || []).filter((li) => li.transaction_id !== transaction_id);
 
@@ -474,6 +809,9 @@ function appReducer(state: AppState, action: AppAction): AppState {
 
       return {
         ...state,
+        funds: reverted.funds,
+        fund_snapshots: reverted.snapshots,
+        transactions: reverted.transactions,
         balance_accounts: updatedAccounts,
         balance_transactions: remainingTx,
         balance_line_items: remainingItems,
@@ -585,6 +923,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const loaded = await svc.loadState();
         if (!cancelled) {
           dispatch({ type: 'LOAD_DATA', payload: { ...loaded, loading: false } });
+          dispatch({ type: 'PROCESS_RECURRING_NEEDS' });
         }
       } catch (e) {
         console.error('Storage load failed:', e);

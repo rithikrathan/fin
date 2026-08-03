@@ -13,7 +13,8 @@ CREATE TABLE IF NOT EXISTS funds (
   interest_rate REAL,
   interest_frequency TEXT,
   interest_calc_type TEXT,
-  is_career_fund INTEGER NOT NULL DEFAULT 0
+  is_career_fund INTEGER NOT NULL DEFAULT 0,
+  receive_from_income INTEGER NOT NULL DEFAULT 1
 );
 
 CREATE TABLE IF NOT EXISTS milestones (
@@ -70,7 +71,8 @@ CREATE TABLE IF NOT EXISTS wants (
   photo_url TEXT,
   purchase_link TEXT,
   added_at TEXT NOT NULL,
-  no_lock INTEGER NOT NULL DEFAULT 0
+  no_lock INTEGER NOT NULL DEFAULT 0,
+  include_impulse_tax INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS needs (
@@ -86,7 +88,10 @@ CREATE TABLE IF NOT EXISTS needs (
   autopay INTEGER NOT NULL DEFAULT 0,
   notes TEXT DEFAULT '',
   active INTEGER NOT NULL DEFAULT 1,
-  reapproval_required INTEGER NOT NULL DEFAULT 0
+  reapproval_required INTEGER NOT NULL DEFAULT 0,
+  paid INTEGER NOT NULL DEFAULT 0,
+  paid_date TEXT,
+  recurring_day INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS investments (
@@ -190,6 +195,7 @@ CREATE TABLE IF NOT EXISTS balance_transactions (
   date TEXT NOT NULL,
   reference_number TEXT,
   notes TEXT,
+  linked_transaction_id INTEGER,
   FOREIGN KEY (account_id) REFERENCES balance_accounts(id) ON DELETE CASCADE
 );
 

@@ -27,6 +27,27 @@ async function ensureSchema(): Promise<void> {
   try {
     await d.select('PRAGMA journal_mode = WAL');
   } catch {}
+  await runMigrations();
+}
+
+async function columnExists(d: Database, table: string, column: string): Promise<boolean> {
+  const rows = await d.select<{ name: string }[]>(`PRAGMA table_info(${table})`);
+  return rows.some((r) => r.name === column);
+}
+
+async function runMigrations(): Promise<void> {
+  const d = await getDb();
+  const ensureColumn = async (table: string, column: string, sql: string) => {
+    if (!(await columnExists(d, table, column))) {
+      await d.execute(`ALTER TABLE ${table} ADD COLUMN ${column} ${sql}`);
+    }
+  };
+  await ensureColumn('funds', 'receive_from_income', 'INTEGER NOT NULL DEFAULT 1');
+  await ensureColumn('wants', 'include_impulse_tax', 'INTEGER NOT NULL DEFAULT 0');
+  await ensureColumn('needs', 'paid', 'INTEGER NOT NULL DEFAULT 0');
+  await ensureColumn('needs', 'paid_date', 'TEXT');
+  await ensureColumn('needs', 'recurring_day', 'INTEGER');
+  await ensureColumn('balance_transactions', 'linked_transaction_id', 'INTEGER');
 }
 
 function rowToNumber(val: unknown): number {
@@ -58,6 +79,7 @@ function parseFund(r: Record<string, unknown>): Fund {
     interest_frequency: rowToOptionalString(r.interest_frequency) as Fund['interest_frequency'],
     interest_calc_type: rowToOptionalString(r.interest_calc_type) as Fund['interest_calc_type'],
     is_career_fund: rowToBool(r.is_career_fund),
+    receive_from_income: rowToBool(r.receive_from_income ?? true),
   };
 }
 
@@ -147,6 +169,7 @@ function parseWant(r: Record<string, unknown>): Want {
     purchase_link: rowToOptionalString(r.purchase_link),
     added_at: String(r.added_at),
     no_lock: rowToBool(r.no_lock),
+    include_impulse_tax: rowToBool(r.include_impulse_tax),
   };
 }
 
@@ -165,6 +188,9 @@ function parseNeed(r: Record<string, unknown>): Need {
     notes: String(r.notes || ''),
     active: rowToBool(r.active),
     reapproval_required: rowToBool(r.reapproval_required),
+    paid: rowToBool(r.paid),
+    paid_date: rowToOptionalString(r.paid_date),
+    recurring_day: r.recurring_day != null ? rowToNumber(r.recurring_day) : null,
   };
 }
 
@@ -274,6 +300,7 @@ function parseBalanceTransaction(r: Record<string, unknown>): BalanceTransaction
     date: String(r.date),
     reference_number: rowToOptionalString(r.reference_number) || undefined,
     notes: rowToOptionalString(r.notes) || undefined,
+    linked_transaction_id: r.linked_transaction_id != null ? rowToNumber(r.linked_transaction_id) : undefined,
   };
 }
 
@@ -384,8 +411,8 @@ export class TauriStorageService implements StorageService {
         await d.execute('DELETE FROM funds');
         for (const f of state.funds) {
           await d.execute(
-            'INSERT INTO funds (id, name, balance, allocation_pct, allocation_locked, color, deadline, goal_amount, interest_rate, interest_frequency, interest_calc_type, is_career_fund) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)',
-            [f.id, f.name, f.balance, f.allocation_pct, f.allocation_locked ? 1 : 0, f.color, f.deadline, f.goal_amount, f.interest_rate, f.interest_frequency, f.interest_calc_type, f.is_career_fund ? 1 : 0]
+            'INSERT INTO funds (id, name, balance, allocation_pct, allocation_locked, color, deadline, goal_amount, interest_rate, interest_frequency, interest_calc_type, is_career_fund, receive_from_income) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)',
+            [f.id, f.name, f.balance, f.allocation_pct, f.allocation_locked ? 1 : 0, f.color, f.deadline, f.goal_amount, f.interest_rate, f.interest_frequency, f.interest_calc_type, f.is_career_fund ? 1 : 0, f.receive_from_income ? 1 : 0]
           );
         }
 
@@ -430,16 +457,16 @@ export class TauriStorageService implements StorageService {
         await d.execute('DELETE FROM wants');
         for (const w of state.wants) {
           await d.execute(
-            'INSERT INTO wants (id, name, target_price, current_saved, category, priority, purchased, purchase_date, notes, days_to_buy, predicted_date, photo_url, purchase_link, added_at, no_lock) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)',
-            [w.id, w.name, w.target_price, w.current_saved, w.category, w.priority, w.purchased ? 1 : 0, w.purchase_date, w.notes, w.days_to_buy, w.predicted_date, w.photo_url, w.purchase_link, w.added_at, w.no_lock ? 1 : 0]
+            'INSERT INTO wants (id, name, target_price, current_saved, category, priority, purchased, purchase_date, notes, days_to_buy, predicted_date, photo_url, purchase_link, added_at, no_lock, include_impulse_tax) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)',
+            [w.id, w.name, w.target_price, w.current_saved, w.category, w.priority, w.purchased ? 1 : 0, w.purchase_date, w.notes, w.days_to_buy, w.predicted_date, w.photo_url, w.purchase_link, w.added_at, w.no_lock ? 1 : 0, w.include_impulse_tax ? 1 : 0]
           );
         }
 
         await d.execute('DELETE FROM needs');
         for (const n of state.needs) {
           await d.execute(
-            'INSERT INTO needs (id, name, amount, category, recurring, frequency, due_date, fund_id, fund_name, autopay, notes, active, reapproval_required) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)',
-            [n.id, n.name, n.amount, n.category, n.recurring ? 1 : 0, n.frequency, n.due_date, n.fund_id, n.fund_name, n.autopay ? 1 : 0, n.notes, n.active ? 1 : 0, n.reapproval_required ? 1 : 0]
+            'INSERT INTO needs (id, name, amount, category, recurring, frequency, due_date, fund_id, fund_name, autopay, notes, active, reapproval_required, paid, paid_date, recurring_day) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)',
+            [n.id, n.name, n.amount, n.category, n.recurring ? 1 : 0, n.frequency, n.due_date, n.fund_id, n.fund_name, n.autopay ? 1 : 0, n.notes, n.active ? 1 : 0, n.reapproval_required ? 1 : 0, n.paid ? 1 : 0, n.paid_date, n.recurring_day]
           );
         }
 
@@ -508,8 +535,8 @@ export class TauriStorageService implements StorageService {
         await d.execute('DELETE FROM balance_transactions');
         for (const bt of state.balance_transactions || []) {
           await d.execute(
-            'INSERT INTO balance_transactions (id, account_id, type, transaction_total, date, reference_number, notes) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-            [bt.id, bt.account_id, bt.type, bt.transaction_total, bt.date, bt.reference_number || null, bt.notes || null]
+            'INSERT INTO balance_transactions (id, account_id, type, transaction_total, date, reference_number, notes, linked_transaction_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+            [bt.id, bt.account_id, bt.type, bt.transaction_total, bt.date, bt.reference_number || null, bt.notes || null, bt.linked_transaction_id ?? null]
           );
         }
 
