@@ -70,7 +70,7 @@ export default function Select<T extends string | number = string>({
             </button>
 
             {open && (
-                <div className={`absolute top-full mt-1.5 min-w-full w-max max-w-[320px] z-50 select-dropdown-popover border border-border-subtle rounded-xl p-1.5 shadow-2xl animate-fadeIn space-y-0.5 ${alignRight ? 'right-0' : 'left-0'}`}>
+                <div className={`absolute top-full mt-1.5 min-w-full w-max max-w-[320px] max-h-[160px] overflow-y-auto z-50 select-dropdown-popover border border-border-subtle rounded-xl p-1.5 shadow-2xl animate-fadeIn space-y-0.5 ${alignRight ? 'right-0' : 'left-0'}`}>
                     {options.map((opt) => {
                         const isSelected = opt.value === value;
                         return (
