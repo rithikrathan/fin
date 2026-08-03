@@ -304,7 +304,7 @@ export default function BalanceDetailPage() {
                   )}
 
                   {/* Itemized Breakdown (Accordion) */}
-                  {txLineItems.length > 0 && (isExpanded || txLineItems.length <= 2) && (
+                  {txLineItems.length > 0 && isExpanded && (
                     <div className="pt-2 border-t border-white/[0.06] space-y-1.5">
                       <div className="text-[10px] uppercase tracking-wider font-bold text-txt-secondary">
                         Itemized Breakdown ({txLineItems.length} items)
