@@ -144,7 +144,13 @@ export default function FundsPage() {
                 .reduce((s, t) => s + t.amount, 0);
 
               const committedNeeds = state.needs
-                .filter((n) => n.fund_id === fund.id && n.active)
+                .filter(
+                    (n) =>
+                        n.fund_id === fund.id &&
+                        n.active &&
+                        !n.paid &&
+                        n.category !== 'Debt EMI'
+                )
                 .reduce((s, n) => {
                   if (n.frequency === 'monthly') return s + n.amount;
                   if (n.frequency === 'weekly') return s + n.amount * 4;

@@ -50,7 +50,12 @@ export default function HomePage() {
     const pendingWantsCount = state.wants.filter((w) => !w.purchased).length;
 
     // --- GHOST BALANCE & COMMITTED DEDUCTIONS MATH ---
-    const committedNeeds = state.needs.filter((n) => n.active).reduce((s, n) => {
+    // Store-linked needs mirror total_due (already counted in totalStoreBalance),
+    // Debt EMI needs are mirrored by committedDebtsEMIs below, and paid needs are
+    // already settled — none of them must commit cash twice.
+    const committedNeeds = state.needs.filter(
+        (n) => n.active && !n.balance_account_id && !n.paid && n.category !== 'Debt EMI'
+    ).reduce((s, n) => {
         if (n.frequency === 'weekly') return s + n.amount * 4;
         if (n.frequency === 'yearly') return s + n.amount / 12;
         return s + n.amount;
