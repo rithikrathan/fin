@@ -366,6 +366,9 @@ function WantCard({
     onAddMoney: (want: Want) => void;
 }) {
     const pct = want.target_price > 0 ? (want.current_saved / want.target_price) * 100 : 0;
+    const tax = want.include_impulse_tax
+        ? round2((want.target_price * (impulseTaxPct || 0)) / 100)
+        : 0;
 
     const handlePurchase = () => {
         const wantsFund = funds.find((f) => f.name.toLowerCase() === 'wants') || funds[0];
@@ -420,6 +423,7 @@ function WantCard({
                             <span className="text-txt-secondary">Saved / Target</span>
                             <span className="text-txt-primary font-bold">
                                 {formatCurrency(want.current_saved)} / {formatCurrency(want.target_price)}
+                                {tax > 0 && <span className="text-amber-400"> +{formatCurrency(tax)}</span>}
                             </span>
                         </div>
                         <div className="h-2 w-full bg-white/[0.06] rounded-full overflow-hidden">
@@ -436,7 +440,7 @@ function WantCard({
                     {want.include_impulse_tax && !want.purchased && (
                         <div className="text-[10px] text-amber-400/80 flex items-center gap-1">
                             <Sparkles className="w-3 h-3 shrink-0" />
-                            <span>Includes {impulseTaxPct}% impulse tax on purchase</span>
+                            <span>Includes {impulseTaxPct}% impulse tax on purchase (+{formatCurrency(tax)})</span>
                         </div>
                     )}
 
