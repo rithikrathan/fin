@@ -178,7 +178,7 @@ export default function HomePage() {
                                     {state.settings.allocation_mode === 'waterfall' ? 'Waterfall' : `${needsFund?.allocation_pct ?? 50}% Pro-Rata`}
                                 </span>
                             </div>
-                            <div className="space-y-1">
+                            <div className="space-y-1 text-right">
                                 <div className="flex items-center justify-between">
                                     <span className="text-[10px] uppercase tracking-wider font-bold text-txt-secondary">Needs Fund</span>
                                     <span className="text-[10px] font-mono text-loss font-semibold">{needsCashPct}% Cash</span>
@@ -202,7 +202,7 @@ export default function HomePage() {
                                     {state.settings.allocation_mode === 'waterfall' ? 'Waterfall' : `${wantsFund?.allocation_pct ?? 20}% Pro-Rata`}
                                 </span>
                             </div>
-                            <div className="space-y-1">
+                            <div className="space-y-1 text-right">
                                 <div className="flex items-center justify-between">
                                     <span className="text-[10px] uppercase tracking-wider font-bold text-txt-secondary">Wants Fund</span>
                                     <span className="text-[10px] font-mono text-purple-400 font-semibold">{wantsCashPct}% Cash • {pendingWantsCount} Wants</span>
@@ -226,7 +226,7 @@ export default function HomePage() {
                                     {state.settings.allocation_mode === 'waterfall' ? 'Waterfall' : `${savingsFund?.allocation_pct ?? 30}% Pro-Rata`}
                                 </span>
                             </div>
-                            <div className="space-y-1">
+                            <div className="space-y-1 text-right">
                                 <div className="flex items-center justify-between">
                                     <span className="text-[10px] uppercase tracking-wider font-bold text-txt-secondary">Savings Fund</span>
                                     <span className="text-[10px] font-mono text-gain font-semibold">{savingsCashPct}% Cash</span>
@@ -245,19 +245,19 @@ export default function HomePage() {
                             onClick={() => navigate('/investments')}
                             className="p-4 rounded-2xl bg-surface border border-border-subtle hover:border-gain/50 transition-all duration-300 cursor-pointer flex items-center justify-between group hover:-translate-y-0.5 shadow-md"
                         >
-                            <div className="space-y-0.5">
+                            <div className="space-y-1">
                                 <span className="text-[10px] uppercase tracking-wider text-txt-secondary font-bold flex items-center gap-1.5">
                                     <TrendingUp className="w-3.5 h-3.5 text-gain" />
                                     Investments
                                 </span>
+                                <span className={`inline-block text-xs font-mono font-bold px-2 py-0.5 rounded ${investmentGain >= 0 ? 'bg-gain/10 text-gain border border-gain/20' : 'bg-loss/10 text-loss border border-loss/20'}`}>
+                                    {investmentGain >= 0 ? '+' : ''}{investmentGainPct.toFixed(1)}%
+                                </span>
+                            </div>
+                            <div className="text-right">
                                 <div className="font-mono text-lg font-bold text-txt-primary group-hover:text-gain transition-colors">
                                     {formatCurrency(totalCurrentValue)}
                                 </div>
-                            </div>
-                            <div className="text-right">
-                                <span className={`text-xs font-mono font-bold px-2 py-0.5 rounded ${investmentGain >= 0 ? 'bg-gain/10 text-gain border border-gain/20' : 'bg-loss/10 text-loss border border-loss/20'}`}>
-                                    {investmentGain >= 0 ? '+' : ''}{investmentGainPct.toFixed(1)}%
-                                </span>
                             </div>
                         </div>
 
@@ -266,18 +266,20 @@ export default function HomePage() {
                             onClick={() => navigate('/balances')}
                             className="p-4 rounded-2xl bg-surface border border-border-subtle hover:border-brand/50 transition-all duration-300 cursor-pointer flex items-center justify-between group hover:-translate-y-0.5 shadow-md"
                         >
-                            <div className="space-y-0.5">
+                            <div className="space-y-1">
                                 <span className="text-[10px] uppercase tracking-wider text-txt-secondary font-bold flex items-center gap-1.5">
                                     <CreditCard className="w-3.5 h-3.5 text-brand" />
                                     Store Card Dues
                                 </span>
+                                <span className="text-xs text-txt-secondary font-mono font-bold">
+                                    {state.balance_accounts.length} Ledgers
+                                </span>
+                            </div>
+                            <div className="text-right">
                                 <div className="font-mono text-lg font-bold text-txt-primary group-hover:text-brand transition-colors">
                                     {formatCurrency(totalStoreBalance)}
                                 </div>
                             </div>
-                            <span className="text-xs text-txt-secondary font-mono font-bold">
-                                {state.balance_accounts.length} Ledgers
-                            </span>
                         </div>
 
                         {/* Active Debts Card */}
@@ -285,18 +287,20 @@ export default function HomePage() {
                             onClick={() => navigate('/debts')}
                             className="p-4 rounded-2xl bg-surface border border-border-subtle hover:border-loss/50 transition-all duration-300 cursor-pointer flex items-center justify-between group hover:-translate-y-0.5 shadow-md"
                         >
-                            <div className="space-y-0.5">
+                            <div className="space-y-1">
                                 <span className="text-[10px] uppercase tracking-wider text-txt-secondary font-bold flex items-center gap-1.5">
                                     <Landmark className="w-3.5 h-3.5 text-loss" />
                                     Active Debts & Loans
                                 </span>
+                                <span className="text-xs text-txt-secondary font-mono font-bold">
+                                    {state.debts.filter((d) => d.active).length} Active
+                                </span>
+                            </div>
+                            <div className="text-right">
                                 <div className="font-mono text-lg font-bold text-txt-primary group-hover:text-loss transition-colors">
                                     {formatCurrency(totalDebts)}
                                 </div>
                             </div>
-                            <span className="text-xs text-txt-secondary font-mono font-bold">
-                                {state.debts.filter((d) => d.active).length} Active
-                            </span>
                         </div>
                     </div>
                 </div>

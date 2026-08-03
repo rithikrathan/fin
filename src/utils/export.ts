@@ -62,6 +62,7 @@ export function exportTransactionsPDF(transactions: Transaction[], state: AppSta
       {
         head: ['Date', 'Type', 'Name', 'Amount', 'Fund', 'Category'],
         body: rows,
+        alignRight: [3],
       },
     ],
   });
@@ -86,6 +87,7 @@ export function exportReportPDF(report: ReportData, funds: AppState['funds']) {
           ['Net cashflow', formatCurrency(report.net)],
           ['Transactions', String(report.transaction_count)],
         ],
+        alignRight: [1],
       },
       {
         heading: 'Expenses Intent Breakdown',
@@ -93,14 +95,17 @@ export function exportReportPDF(report: ReportData, funds: AppState['funds']) {
           ['Planned (Budgeted)', formatCurrency(report.planned_total)],
           ['Unplanned (Impulse)', formatCurrency(report.unplanned_total)],
         ],
+        alignRight: [1],
       },
       {
         heading: 'Expenses by Fund Source',
         body: byFundRows,
+        alignRight: [1],
       },
       {
         heading: 'Expenses by Category',
         body: byCategoryRows,
+        alignRight: [1],
       },
     ],
   });
@@ -135,6 +140,7 @@ export function exportBalanceStatementPDF(params: {
       {
         head: ['Date', 'Type', 'Reference', 'Details / Items', 'Amount'],
         body: rows,
+        alignRight: [4],
       },
     ],
   });
@@ -148,6 +154,7 @@ function exportTablePDF(opts: {
     heading?: string;
     head?: string[];
     body: (string | number)[][];
+    alignRight?: number[];
   }[];
 }) {
   const doc = new jsPDF();
@@ -168,12 +175,15 @@ function exportTablePDF(opts: {
       doc.text(section.heading, 14, startY + 4);
       startY += 10;
     }
+    const columnStyles: Record<number, { halign: 'right' }> = {};
+    for (const idx of section.alignRight || []) columnStyles[idx] = { halign: 'right' };
     autoTable(doc, {
       startY,
       head: section.head ? [section.head] : undefined,
       body: section.body.map((r) => r.map((c) => String(c))),
       styles: { fontSize: 9, cellPadding: 2.2 },
       headStyles: { fillColor: [255, 42, 42], textColor: 255, fontSize: 8 },
+      columnStyles,
       margin: { left: 14, right: 14 },
     });
     startY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;

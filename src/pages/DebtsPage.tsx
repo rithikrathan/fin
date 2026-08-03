@@ -69,7 +69,7 @@ export default function DebtsPage() {
   return (
     <div className="max-w-5xl mx-auto space-y-8">
       {/* Flattened summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-white/[0.06] border-b border-white/[0.06] pb-6 gap-2 text-center sm:text-left">
+      <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-white/[0.06] border-b border-white/[0.06] pb-6 gap-2 text-center sm:text-right">
         <div className="pr-4">
           <div className="text-[10px] text-txt-secondary uppercase tracking-widest font-bold mb-1">Total Remaining</div>
           <div className="font-mono text-xl font-bold text-loss">{formatCurrency(totalRemaining)}</div>
