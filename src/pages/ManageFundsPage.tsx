@@ -386,11 +386,20 @@ function FundFormModal({
             onChange={(e) => setPct(e.target.value)}
             min="0"
             max="100"
-            className="w-full bg-transparent border-b border-white/20 focus:border-brand rounded-none py-2 text-base text-txt-primary font-mono placeholder:text-txt-secondary/30 outline-none transition-colors"
+            disabled={!receiveFromIncome}
+            className={`w-full bg-transparent border-b rounded-none py-2 text-base font-mono placeholder:text-txt-secondary/30 outline-none transition-colors ${
+              receiveFromIncome
+                ? 'border-white/20 focus:border-brand text-txt-primary'
+                : 'border-white/10 text-txt-secondary/40 cursor-not-allowed'
+            }`}
           />
           <div className="flex justify-between mt-1 text-xs">
-            <span className="text-txt-secondary">Total across income funds</span>
-            <span className={`font-mono ${Math.round(totalPct) === 100 ? 'text-gain' : 'text-loss'}`}>{Math.round(totalPct)}%</span>
+            <span className="text-txt-secondary">
+              {receiveFromIncome ? 'Total across income funds' : 'Funded via transfers only'}
+            </span>
+            {receiveFromIncome && (
+              <span className={`font-mono ${Math.round(totalPct) === 100 ? 'text-gain' : 'text-loss'}`}>{Math.round(totalPct)}%</span>
+            )}
           </div>
         </div>
 
@@ -518,7 +527,7 @@ function FundFormModal({
 
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button variant="primary" onClick={save} disabled={!name.trim() || !!nameError || Math.round(totalPct) !== 100}>
+          <Button variant="primary" onClick={save} disabled={!name.trim() || !!nameError || (receiveFromIncome && Math.round(totalPct) !== 100)}>
             {editing ? 'Save Changes' : 'Create Fund'}
           </Button>
         </div>
