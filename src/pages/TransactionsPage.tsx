@@ -13,6 +13,7 @@ import FilePicker from '../components/shared/FilePicker';
 import { getStorageService } from '../storage/StorageService';
 import { MessagesIcon, DownloadIcon } from '../components/shared/Icons';
 import FloatingAddButton from '../components/shared/FloatingAddButton';
+import FundTransferModal from '../components/funds/FundTransferModal';
 import { runPatterns } from '../utils/matching';
 import { exportTransactionsCSV, exportTransactionsPDF } from '../utils/export';
 
@@ -26,6 +27,7 @@ export default function TransactionsPage() {
   // Transactions list filter and modal states
   const [incomeOpen, setIncomeOpen] = useState(false);
   const [expenseOpen, setExpenseOpen] = useState(false);
+  const [transferOpen, setTransferOpen] = useState(false);
   const [filter, setFilter] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
 
   // Messages log states
@@ -307,6 +309,11 @@ export default function TransactionsPage() {
         funds={state.funds}
         dispatch={dispatch}
       />
+
+      <FundTransferModal
+        open={transferOpen}
+        onClose={() => setTransferOpen(false)}
+      />
       
       <Modal open={addMsgOpen} onClose={() => setAddMsgOpen(false)} title="Add Message Manually">
         <div className="space-y-4">
@@ -332,6 +339,7 @@ export default function TransactionsPage() {
           actions={[
             { label: '+ Income', onClick: () => setIncomeOpen(true) },
             { label: '+ Expense', onClick: () => setExpenseOpen(true) },
+            { label: '+ Transfer', onClick: () => setTransferOpen(true) },
           ]}
         />
       ) : (
